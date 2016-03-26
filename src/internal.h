@@ -24,7 +24,6 @@
 
 #define BB_MSG_DEBUF 500
 #define MAX_BUFFER_LEN 512
-#define BB_EOF MAX_BUFFER_LEN + 10
 
 extern bloxbot_Conn* irc_conn;
 extern long int irc_last_msg;

@@ -19,8 +19,6 @@
 
 #include "conn_plain.h"
 
-#include "internal.h"
-
 #include <sys/socket.h>
 
 struct _conn_plain_ud{
@@ -31,11 +29,6 @@ size_t _conn_plain_read(bloxbot_Conn* conn, char* buf, size_t count){
     struct _conn_plain_ud* mode_ud = (struct _conn_plain_ud*)conn->ud;
 
     int ret = recv(mode_ud->sockfd, buf, count, 0);
-
-    if(ret == 0){
-        //Maybe this is what we want? We *can* have 0 byte responses
-        return BB_EOF;
-    }
 
     if(ret == -1){
         //Handle error

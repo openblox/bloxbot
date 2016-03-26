@@ -26,6 +26,7 @@ extern unsigned int bb_isVerbose;
 
 #include "conn.h"
 
+int blox_sendDirectlyl(char* line, int len);
 int blox_sendDirectly(char* line);
 int blox_send(char* line);
 int blox_join(char* chan);

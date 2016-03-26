@@ -1,5 +1,7 @@
 /aclocal.m4
 /autom4te.cache/
+/bot.cer
+/bot.key
 /compile
 /config.guess
 /config.log

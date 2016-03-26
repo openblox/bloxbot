@@ -43,8 +43,6 @@ void _bb_run_queue(){
 
             irc_last_msg = cT;
         }
-    }else{
-        printf("%ld - %ld (%ld) < %d\n", cT, irc_last_msg, cT - irc_last_msg, BB_MSG_DEBUF);
     }
 }
 
