@@ -21,6 +21,8 @@
 
 #include "internal.h"
 
+#include "plugin.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -32,19 +34,145 @@
 static unsigned char stillConnected = 1;
 unsigned char bb_verifyTLS = 1;
 unsigned int bb_isVerbose = 1;
+unsigned char bb_useClientCert = 1;
 bloxbot_Conn* irc_conn = NULL;
 long int irc_last_msg = 0;
+
+char* irc_user = NULL;
+char* irc_nick = NULL;
+char* irc_gecos = NULL;
+
+unsigned char doneReg = 0;
+unsigned char doneInit = 0;
+unsigned char capStage = 0;
+unsigned char readyForInit = 0;
+
+int handleLine(char* inBuffer, int lineLen){
+    //SASL EXTERNAL
+    if(bb_isVerbose){
+        fwrite(inBuffer, sizeof(char), lineLen, stdout);
+        puts("");
+    }
+
+    if(bb_useClientCert && capStage != 3 && (capStage == 2 || inBuffer[0] == ':')){
+        if(capStage == 0){
+            char* bufAfterServ = strchr(inBuffer, ' ');
+            if(bufAfterServ && strlen(bufAfterServ) > 4){
+                if(strncmp(bufAfterServ, " CAP ", 5) == 0){
+                    bufAfterServ = &bufAfterServ[5];
+
+                    bufAfterServ = strchr(bufAfterServ, ' ');
+                    if(bufAfterServ){
+                        bufAfterServ = &bufAfterServ[1];
+                        if(strncmp(bufAfterServ, "LS :", 4) == 0){
+                            if(strstr(bufAfterServ, "sasl")){
+                                blox_sendDirectlyl("CAP REQ :sasl\r\n", 15);
+                                capStage = 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }else if(capStage == 1){
+            char* bufAfterServ = strchr(inBuffer, ' ');
+            if(bufAfterServ && strlen(bufAfterServ) > 4){
+                if(strncmp(bufAfterServ, " CAP ", 5) == 0){
+                    if(strstr(bufAfterServ, "ACK :sasl")){
+                        blox_sendDirectlyl("AUTHENTICATE EXTERNAL\r\n", 23);
+                        capStage = 2;
+                    }
+                }
+            }
+        }else if(capStage == 2){
+            if(strstr(inBuffer, "AUTHENTICATE +")){
+                blox_sendDirectlyl("AUTHENTICATE +\r\n", 16);
+                blox_sendDirectlyl("CAP END\r\n", 9);
+                capStage = 3;
+            }
+        }
+    }
+
+    if(!doneReg && capStage < 1){
+        if(bb_useClientCert){
+            blox_sendDirectlyl("CAP LS\r\n", 8);
+        }
+
+        int nickLineLen = 7 + strlen(irc_nick);
+        char nickLine[nickLineLen];
+        strcpy(nickLine, "NICK ");
+        strcat(nickLine, irc_nick);
+        strcat(nickLine, "\r\n");
+
+        blox_sendDirectlyl(nickLine, nickLineLen);
+
+        int userLineLen = 13 + strlen(irc_user) + strlen(irc_gecos);
+
+        char userLine[userLineLen];
+        strcpy(userLine, "USER ");
+        strcat(userLine, irc_user);
+        strcat(userLine, " * * :");
+        strcat(userLine, irc_gecos);
+        strcat(userLine, "\r\n");
+
+        blox_sendDirectlyl(userLine, userLineLen);
+
+        doneReg = 1;
+    }
+
+    if(strncmp(inBuffer, "PING :", 6) == 0){
+        blox_pong(&inBuffer[6]);
+    }
+
+    if(inBuffer[0] == ':'){
+        char* strCode_ = strchr(inBuffer, ' ');
+        if(strlen(strCode_) > 3){
+            char* strCode = malloc(4);
+            if(!strCode){
+                return 1;
+            }
+            memcpy(strCode, &strCode_[1], 3);
+            strCode[3] = '\0';
+
+            int ircCode = strtol(strCode, NULL, 0);
+
+            free(strCode);
+
+            if(strncmp(&strCode_[1], "NOTICE", 6) == 0){
+                char* noticeFrom = &strCode_[8];
+                char* noticeFromEnd = strchr(noticeFrom, ' ');
+                int noticeFromLen = (int)(noticeFromEnd - noticeFrom);
+
+                char* noticeMsg = &noticeFromEnd[2];
+                printf("NOTICE: %.*s says: %s\n", noticeFromLen, noticeFrom, noticeMsg);
+
+                if(memcmp(noticeFrom, "Auth", 4) == 0){
+                    puts("It's Auth!");
+                    if(strstr(noticeMsg, "Welcome to")){
+                        puts("Says welcome to!");
+                        if(!doneInit){
+                            blox_join("#OpenBlox");
+                            doneInit = 1;
+                        }
+                    }
+                }
+
+                return 0;
+            }
+
+            if(ircCode == 900){
+            }
+            printf("Code: %i\n", ircCode);
+        }
+    }
+
+    return 0;
+}
 
 int main(int argc, char* argv[]){
     //TODO: Configuration
     char* server = "irc.openblox.org";
     int port = 6697;
     unsigned char useTLS = 1;
-
-    char* irc_user = NULL;
-    char* irc_nick = NULL;
-    char* irc_gecos = NULL;
-    char* irc_pass = NULL;
 
     static struct option long_opts[] = {
         {"version", no_argument, 0, 'v'},
@@ -129,6 +257,7 @@ int main(int argc, char* argv[]){
 
     //Init
     gnutls_global_init();
+    bb_loadPlugin("ob");
 
     //Actually do the connection
     bloxbot_open_fnc connFunc = NULL;
@@ -145,80 +274,45 @@ int main(int argc, char* argv[]){
         return EXIT_FAILURE;
     }
 
-    char inBuffer[MAX_BUFFER_LEN+1];
-    size_t bufOff = 0;
-
-    unsigned char doneReg = 0;
+    char inBufferl[MAX_BUFFER_LEN+1];
+    char* inBuffer;
 
     int ret = 1;
     while(ret != -1 && stillConnected){
         _bb_run_queue();
 
-        ret = irc_conn->read(irc_conn, inBuffer, MAX_BUFFER_LEN);
+        ret = irc_conn->read(irc_conn, inBufferl, MAX_BUFFER_LEN);
 
         if(ret < 0){
             exit(EXIT_FAILURE);
             break;//Obviously this isn't necessary
         }
 
-        if(ret == BB_EOF){
+        if(ret == 0){
             stillConnected = 0;
             break;
         }
 
         size_t realEnd = 0;
+        size_t realStart = 0;
+
+        inBuffer = inBufferl;
 
         unsigned char hadEnd = 0;
-        for(size_t i = bufOff; i < (bufOff + ret); i++){
-            if(inBuffer[i] == '\r' || inBuffer[i] == '\n'){
+        for(size_t i = 0; i < ret; i++){
+            if(inBuffer[i] == '\r'){
                 inBuffer[i] = '\0';
-                hadEnd = 1;
                 realEnd = i;
+
+                if(handleLine(inBuffer, realEnd)){
+                    return EXIT_FAILURE;
+                }
                 break;
             }
         }
 
         if(!hadEnd){
-            bufOff = bufOff + ret;
             continue;
-        }else{
-            bufOff = 0;
-        }
-
-        if(!doneReg){
-            int nickLineLen = 7 + strlen(irc_nick);
-            char nickLine[nickLineLen];
-            strcpy(nickLine, "NICK ");
-            strcat(nickLine, irc_nick);
-            strcat(nickLine, "\r\n");
-
-            irc_conn->write(irc_conn, nickLine, nickLineLen);
-
-            int userLineLen = 13 + strlen(irc_user) + strlen(irc_gecos);
-
-            char userLine[userLineLen];
-            strcpy(userLine, "USER ");
-            strcat(userLine, irc_user);
-            strcat(userLine, " * * :");
-            strcat(userLine, irc_gecos);
-            strcat(userLine, "\r\n");
-
-            irc_conn->write(irc_conn, userLine, userLineLen);
-
-            blox_join("#OpenBlox");
-
-            doneReg = 1;
-        }
-
-        if(ret > 0){
-            if(bb_isVerbose){
-                fwrite(inBuffer, sizeof(char), realEnd, stdout);
-                puts("");
-            }
-
-            if(strncmp(inBuffer, "PING :", 6) == 0){
-                blox_pong(&inBuffer[6]);
-            }
         }
     }
 

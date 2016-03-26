@@ -17,25 +17,23 @@
  * along with bloxbot.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef BB_INTERNAL_H_
-#define BB_INTERNAL_H_
+#ifndef BB_PLUGIN_H_
+#define BB_PLUGIN_H_
 
-#include "conn.h"
+typedef struct bloxbot_Plugin bloxbot_Plugin;
 
-#define BB_MSG_DEBUF 500
-#define MAX_BUFFER_LEN 512
+typedef void (*bloxbot_plugin_init_fnc)(bloxbot_Plugin* plugin);
+typedef void (*bloxbot_plugin_deinit_fnc)(bloxbot_Plugin* plugin);
 
-extern bloxbot_Conn* irc_conn;
-extern long int irc_last_msg;
+typedef struct bloxbot_Plugin{
+    void* _handle;//DO NOT USE THIS IN PLUGIN CODE!
+    void* ud;
+    bloxbot_plugin_init_fnc init;
+    bloxbot_plugin_deinit_fnc deinit;
+} bloxbot_Plugin;
 
-struct bb_QueueItem{
-    char* line;
-    struct bb_QueueItem* next;
-};
+typedef bloxbot_Plugin* (*bloxbot_plugin_entry_fnc)();
 
-//TODO: Thread safety
-void _bb_run_queue();
-void _bb_push_queue(char* line);
-long int _bb_curtime();
+bloxbot_Plugin* bb_loadPlugin(char* name);
 
 #endif

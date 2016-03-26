@@ -26,6 +26,7 @@
 #include "net_util.h"
 
 extern unsigned char bb_verifyTLS;
+extern unsigned char bb_useClientCert;
 
 typedef struct bloxbot_Conn bloxbot_Conn;
 

@@ -24,16 +24,23 @@
 #include <stdio.h>
 #include <string.h>
 
-int blox_sendDirectly(char* line){
+int blox_sendDirectlyl(char* line, int len){
     if(!irc_conn){
         return -1;
     }
     if(!line){
         return 0;
     }
+    printf(">> %.*s", len, line);
+    return irc_conn->write(irc_conn, line, len);
+}
+
+int blox_sendDirectly(char* line){
+    if(!line){
+        return 0;
+    }
     int line_len = strlen(line);
-    printf(">> %.*s", line_len, line);
-    return irc_conn->write(irc_conn, line, line_len);
+    return blox_sendDirectlyl(line, line_len);
 }
 
 int blox_send(char* line){

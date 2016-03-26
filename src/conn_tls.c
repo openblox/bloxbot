@@ -64,7 +64,7 @@ size_t _conn_tls_read(bloxbot_Conn* conn, char* buf, size_t count){
     int ret = gnutls_record_recv(mode_ud->session, buf, count);
 
     if(ret == 0){
-        return BB_EOF;
+        return 0;
     }
 
     if(ret == GNUTLS_E_INTERRUPTED || ret == GNUTLS_E_AGAIN){
@@ -123,6 +123,13 @@ bloxbot_Conn* bloxbot_conn_tls(char* addr, int port){
     gnutls_certificate_allocate_credentials(&xcred);
 
     gnutls_certificate_set_x509_system_trust(xcred);
+
+    if(bb_useClientCert){
+        puts("Using client certificate authentication.");
+        gnutls_certificate_set_x509_key_file(xcred, "bot.cer", "bot.key", GNUTLS_X509_FMT_PEM);
+    }
+
+
     gnutls_certificate_set_verify_function(xcred, _verify_certificate_callback);
 
     gnutls_session_set_ptr(mode_ud->session, mode_ud);

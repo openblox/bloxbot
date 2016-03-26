@@ -1,5 +1,7 @@
 /aclocal.m4
 /autom4te.cache/
+/bot.cer
+/bot.key
 /compile
 /config.guess
 /config.log
@@ -8,6 +10,8 @@
 /configure
 /depcomp
 /install-sh
+/libtool
+/ltmain.sh
 /Makefile
 /Makefile.in
 /missing
@@ -20,3 +24,12 @@
 /src/Makefile
 /src/Makefile.in
 /src/stamp-*
+/plugins/*/.libs/
+/plugins/*/.deps/
+/plugins/Makefile
+/plugins/Makefile.in
+/plugins/*/Makefile
+/plugins/*/Makefile.in
+/plugins/*/*.o
+/plugins/*/*.la
+/plugins/*/*_la-*

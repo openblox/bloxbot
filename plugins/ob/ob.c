@@ -17,25 +17,5 @@
  * along with bloxbot.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef BB_INTERNAL_H_
-#define BB_INTERNAL_H_
+#include <plugin.h>
 
-#include "conn.h"
-
-#define BB_MSG_DEBUF 500
-#define MAX_BUFFER_LEN 512
-
-extern bloxbot_Conn* irc_conn;
-extern long int irc_last_msg;
-
-struct bb_QueueItem{
-    char* line;
-    struct bb_QueueItem* next;
-};
-
-//TODO: Thread safety
-void _bb_run_queue();
-void _bb_push_queue(char* line);
-long int _bb_curtime();
-
-#endif
