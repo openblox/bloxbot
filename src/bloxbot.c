@@ -43,7 +43,9 @@ int blox_sendDirectlyl(char* line, int len){
     if(!line){
         return 0;
     }
-    printf(">> %.*s", len, line);
+    if(bb_isVerbose){
+        printf(">> %.*s", len, line);
+    }
     pthread_mutex_lock(&_sock_lock);
     int ret = irc_conn->write(irc_conn, line, len);
     pthread_mutex_unlock(&_sock_lock);

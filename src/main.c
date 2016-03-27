@@ -207,7 +207,8 @@ int handleLine(char* inBuffer, int lineLen){
 
                         if(strcmp(ircCommand, "PRIVMSG") == 0){
                             //TODO: CTCP
-
+                            puts("PRIVMSG!");
+                            printf("Target: %s\n", target);
                             if(target[0] == '#'){
                                 char* theMsg = strchr(&thirdSPCP[1], ':');
                                 printf("msg: \"%s\"", theMsg);
