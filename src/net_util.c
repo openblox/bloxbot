@@ -19,6 +19,7 @@
 
 #include "net_util.h"
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <strings.h>
 
@@ -68,10 +69,13 @@ int net_util_connect(char* addr, int port){
         sockfd = socket(p->ai_family, SOCK_STREAM, 0);
         if(sockfd != -1){
             if(connect(sockfd, p->ai_addr, p->ai_addrlen) == 0){
+                freeaddrinfo(servinfo);
                 return sockfd;
             }
         }
     }
+
+    freeaddrinfo(servinfo);
 
     puts("Failed to connect.");
 
