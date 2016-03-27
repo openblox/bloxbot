@@ -22,12 +22,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
 
 #include <dlfcn.h>
 
 #include <glib.h>
 
-static GHashTable* pluginTable = NULL;
+GHashTable* pluginTable = NULL;
 
 static void _bb_destroy_plugin(void* vdPlug){
     bloxbot_Plugin* plug = (bloxbot_Plugin*)vdPlug;
@@ -79,7 +80,7 @@ bloxbot_Plugin* bb_loadPlugin(char* name){
 
     dlerror();//Clear any existing errors
 
-    void* handle = dlopen(libName, RTLD_LAZY);
+    void* handle = dlopen(libName, RTLD_NOW);
     if(!handle){
         fprintf(stderr, "Error loading plugin '%s': %s\n", name, dlerror());
         return NULL;
@@ -110,4 +111,58 @@ bloxbot_Plugin* bb_loadPlugin(char* name){
     g_hash_table_insert(pluginTable, strdup(name), plug);
 
     return plug;
+}
+
+struct _bb_hook_info{
+    va_list argp;
+    int hook_id;
+};
+
+static void _bb_for_each_hook(void* vdName, void* vdPlug, void* ud){
+    if(!vdPlug){
+        return;
+    }
+    if(!ud){
+        return;
+    }
+
+    bloxbot_Plugin* plug = (bloxbot_Plugin*)vdPlug;
+    struct _bb_hook_info* hookinfo = (struct _bb_hook_info*)ud;
+
+    switch(hookinfo->hook_id){
+        case _BB_HOOK_INIT: {
+            if(plug->init){
+                plug->init(plug);
+            }
+            break;
+        }
+        case _BB_HOOK_DEINIT: {
+            if(plug->deinit){
+                plug->deinit(plug);
+            }
+            break;
+        }
+    }
+}
+
+void _bb_hook(int hook_id, ...){
+    if(!pluginTable){
+        return;
+    }
+
+    struct _bb_hook_info* hookinfo = malloc(sizeof(struct _bb_hook_info));
+    if(!hookinfo){
+        puts("Out of memory");
+        exit(EXIT_FAILURE);
+        return;//Not necessary, but stops some stupid compilers from giving warnings
+    }
+    hookinfo->hook_id = hook_id;
+
+    va_start(hookinfo->argp, hook_id);
+
+    g_hash_table_foreach(pluginTable, _bb_for_each_hook, hookinfo);
+
+    free(hookinfo);
+
+    va_end(hookinfo->argp);
 }

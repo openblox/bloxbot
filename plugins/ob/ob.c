@@ -21,6 +21,13 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <strings.h>
+
+void bloxbot_plugin_ob_init(bloxbot_Plugin* plug){
+    blox_join("#OpenBlox");
+}
+
+void bloxbot_plugin_ob_deinit(){}
 
 bloxbot_Plugin* bloxbot_plugin_ob_entry(){
     bloxbot_Plugin* plug = malloc(sizeof(bloxbot_Plugin));
@@ -28,6 +35,10 @@ bloxbot_Plugin* bloxbot_plugin_ob_entry(){
         puts("Out of memory");
         return NULL;
     }
+    bzero(plug, sizeof(bloxbot_Plugin));
+
+    plug->init = bloxbot_plugin_ob_init;
+    plug->deinit = bloxbot_plugin_ob_deinit;
 
     return plug;
 }

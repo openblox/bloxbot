@@ -20,6 +20,9 @@
 #ifndef BB_PLUGIN_H_
 #define BB_PLUGIN_H_
 
+//We include bloxbot.h here so that plugins don't have to do the runaround
+#include "bloxbot.h"
+
 typedef struct bloxbot_Plugin bloxbot_Plugin;
 
 typedef void (*bloxbot_plugin_init_fnc)(bloxbot_Plugin* plugin);
@@ -35,5 +38,13 @@ typedef struct bloxbot_Plugin{
 typedef bloxbot_Plugin* (*bloxbot_plugin_entry_fnc)();
 
 bloxbot_Plugin* bb_loadPlugin(char* name);
+
+
+#define _BB_HOOK_INIT 1
+#define _BB_HOOK_DEINIT 2
+#define _BB_HOOK_MSG 3
+#define _BB_HOOK_PRIVMSG 4
+
+void _bb_hook(int hook_id, ...);
 
 #endif
