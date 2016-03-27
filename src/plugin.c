@@ -73,10 +73,12 @@ bloxbot_Plugin* bb_loadPlugin(char* name){
     strcat(libName, name);
     strcat(libName, ".so");
 
-    char entryFncName[22 + nameLen];
-    strcpy(entryFncName, "bloxbot_plugin_");
-    strcat(entryFncName, name);
-    strcat(entryFncName, "_entry");
+    char plug_sym_name[_BB_LONGEST_SYM_LEN + 17 + nameLen];
+    strcpy(plug_sym_name, "bloxbot_plugin_");
+    strcat(plug_sym_name, name);
+    plug_sym_name[15 + nameLen] = '_';
+
+    char* plug_symn = &plug_sym_name[15 + nameLen + 1];
 
     dlerror();//Clear any existing errors
 
@@ -88,25 +90,46 @@ bloxbot_Plugin* bb_loadPlugin(char* name){
 
     dlerror();//Clear
 
-    bloxbot_plugin_entry_fnc entryFnc = NULL;
+    bloxbot_plugin_init_fnc initFnc = NULL;
 
-    entryFnc = (bloxbot_plugin_entry_fnc)dlsym(handle, entryFncName);
-    if(!entryFnc){
-        fprintf(stderr, "Error loading plugin '%s': Could not find entry symbol\n", name);
+    strcpy(plug_symn, "init");
+    initFnc = (bloxbot_plugin_init_fnc)dlsym(handle, plug_sym_name);
+    if(!initFnc){
+        fprintf(stderr, "Error loading plugin '%s': Could not find initialization function symbol\n", name);
 
         dlclose(handle);
         return NULL;
     }
 
-    bloxbot_Plugin* plug = entryFnc();
-    if(!plug){
-        //Plugin itself should print more verbose error messages
-        fprintf(stderr, "Error loading plugin '%s'\n", name);
+    bloxbot_plugin_deinit_fnc deinitFnc = NULL;
+
+    strcpy(plug_symn, "deinit");
+    deinitFnc = (bloxbot_plugin_deinit_fnc)dlsym(handle, plug_sym_name);
+    if(!deinitFnc){
+        fprintf(stderr, "Error loading plugin '%s': Could not find deinitialization function symbol\n", name);
+
         dlclose(handle);
+        return NULL;
+    }
+
+    bloxbot_Plugin* plug = malloc(sizeof(bloxbot_Plugin));
+    if(!plug){
+        puts("Out of memory.");
+        dlclose(handle);
+        exit(EXIT_FAILURE);
         return NULL;
     }
 
     plug->_handle = handle;
+    plug->ud = NULL;
+    plug->init = initFnc;
+    plug->deinit = deinitFnc;
+
+    strcpy(plug_symn, "on_msg");
+    plug->on_msg = dlsym(handle, plug_sym_name);
+
+    strcpy(plug_symn, "on_privmsg");
+    plug->on_msg = dlsym(handle, plug_sym_name);
 
     g_hash_table_insert(pluginTable, strdup(name), plug);
 
@@ -117,9 +140,6 @@ struct _bb_hook_info{
     va_list argp;
     int hook_id;
 };
-
-typedef void (*bloxbot_plugin_msg_fnc)(bloxbot_Plugin* plugin, char* target, char* srcNick, char* srcLogin, char* srcHost, char* msg);
-typedef void (*bloxbot_plugin_privmsg_fnc)(bloxbot_Plugin* plugin, char* srcNick, char* srcLogin, char* srcHost, char* msg)
 
 static void _bb_for_each_hook(void* vdName, void* vdPlug, void* ud){
     if(!vdPlug){

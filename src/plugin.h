@@ -28,7 +28,9 @@ typedef struct bloxbot_Plugin bloxbot_Plugin;
 typedef void (*bloxbot_plugin_init_fnc)(bloxbot_Plugin* plugin);
 typedef void (*bloxbot_plugin_deinit_fnc)(bloxbot_Plugin* plugin);
 typedef void (*bloxbot_plugin_msg_fnc)(bloxbot_Plugin* plugin, char* target, char* srcNick, char* srcLogin, char* srcHost, char* msg);
-typedef void (*bloxbot_plugin_privmsg_fnc)(bloxbot_Plugin* plugin, char* srcNick, char* srcLogin, char* srcHost, char* msg)
+typedef void (*bloxbot_plugin_privmsg_fnc)(bloxbot_Plugin* plugin, char* srcNick, char* srcLogin, char* srcHost, char* msg);
+
+#define _BB_LONGEST_SYM_LEN 10
 
 typedef struct bloxbot_Plugin{
     void* _handle;//DO NOT USE THIS IN PLUGIN CODE!
@@ -39,10 +41,7 @@ typedef struct bloxbot_Plugin{
     bloxbot_plugin_privmsg_fnc on_privmsg;
 } bloxbot_Plugin;
 
-typedef bloxbot_Plugin* (*bloxbot_plugin_entry_fnc)();
-
 bloxbot_Plugin* bb_loadPlugin(char* name);
-
 
 #define _BB_HOOK_INIT 1
 #define _BB_HOOK_DEINIT 2
