@@ -118,6 +118,9 @@ struct _bb_hook_info{
     int hook_id;
 };
 
+typedef void (*bloxbot_plugin_msg_fnc)(bloxbot_Plugin* plugin, char* target, char* srcNick, char* srcLogin, char* srcHost, char* msg);
+typedef void (*bloxbot_plugin_privmsg_fnc)(bloxbot_Plugin* plugin, char* srcNick, char* srcLogin, char* srcHost, char* msg)
+
 static void _bb_for_each_hook(void* vdName, void* vdPlug, void* ud){
     if(!vdPlug){
         return;
@@ -139,6 +142,18 @@ static void _bb_for_each_hook(void* vdName, void* vdPlug, void* ud){
         case _BB_HOOK_DEINIT: {
             if(plug->deinit){
                 plug->deinit(plug);
+            }
+            break;
+        }
+        case _BB_HOOK_MSG: {
+            if(plug->on_msg){
+                plug->on_msg(plug, va_arg(hookinfo->argp, char*), va_arg(hookinfo->argp, char*), va_arg(hookinfo->argp, char*), va_arg(hookinfo->argp, char*), va_arg(hookinfo->argp, char*));
+            }
+            break;
+        }
+        case _BB_HOOK_PRIVMSG: {
+            if(plug->on_privmsg){
+                plug->on_privmsg(plug, va_arg(hookinfo->argp, char*), va_arg(hookinfo->argp, char*), va_arg(hookinfo->argp, char*), va_arg(hookinfo->argp, char*));
             }
             break;
         }

@@ -27,12 +27,16 @@ typedef struct bloxbot_Plugin bloxbot_Plugin;
 
 typedef void (*bloxbot_plugin_init_fnc)(bloxbot_Plugin* plugin);
 typedef void (*bloxbot_plugin_deinit_fnc)(bloxbot_Plugin* plugin);
+typedef void (*bloxbot_plugin_msg_fnc)(bloxbot_Plugin* plugin, char* target, char* srcNick, char* srcLogin, char* srcHost, char* msg);
+typedef void (*bloxbot_plugin_privmsg_fnc)(bloxbot_Plugin* plugin, char* srcNick, char* srcLogin, char* srcHost, char* msg)
 
 typedef struct bloxbot_Plugin{
     void* _handle;//DO NOT USE THIS IN PLUGIN CODE!
     void* ud;
     bloxbot_plugin_init_fnc init;
     bloxbot_plugin_deinit_fnc deinit;
+    bloxbot_plugin_msg_fnc on_msg;
+    bloxbot_plugin_privmsg_fnc on_privmsg;
 } bloxbot_Plugin;
 
 typedef bloxbot_Plugin* (*bloxbot_plugin_entry_fnc)();
