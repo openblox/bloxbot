@@ -25,16 +25,36 @@ struct _conn_plain_ud{
     int sockfd;
 };
 
-size_t _conn_plain_read(bloxbot_Conn* conn, char* buf, size_t count){
-    struct _conn_plain_ud* mode_ud = (struct _conn_plain_ud*)conn->ud;
-
-    int ret = recv(mode_ud->sockfd, buf, count, 0);
-
-    if(ret == -1){
-        //Handle error
+/* This function is slightly deceiving!
+ * This function will only return after a complete line has been read.
+ */
+size_t _conn_plain_read(bloxbot_Conn* conn, char* buf, int count){
+    if(!buf){
+        return -1;
     }
 
-    return ret;
+    struct _conn_plain_ud* mode_ud = (struct _conn_plain_ud*)conn->ud;
+
+    int numRead = 0;
+    for(int i = 0; i < count; i++){
+        int ret = recv(mode_ud->sockfd, &buf[i], 1, 0);
+
+        if(ret == 0){
+            return 0;
+        }
+
+        if(ret == -1){
+            //TODO: Handle errors
+        }
+
+        numRead++;
+        if(buf[i] == '\n'){
+            buf[i] = '\0';
+            break;
+        }
+    }
+
+    return numRead;
 }
 
 size_t _conn_plain_write(bloxbot_Conn* conn, char* buf, size_t count){

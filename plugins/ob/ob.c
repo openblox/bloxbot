@@ -19,3 +19,15 @@
 
 #include <plugin.h>
 
+#include <stdlib.h>
+#include <stdio.h>
+
+bloxbot_Plugin* bloxbot_plugin_ob_entry(){
+    bloxbot_Plugin* plug = malloc(sizeof(bloxbot_Plugin));
+    if(!plug){
+        puts("Out of memory");
+        return NULL;
+    }
+
+    return plug;
+}

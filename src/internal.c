@@ -65,12 +65,8 @@ void _bb_push_queue(char* line){
     }
 
     struct bb_QueueItem* qii = curQueue;
-    while(qii != NULL){
-        if(qi->next){
-            qii = qi->next;
-        }else{
-            break;
-        }
+    while(qii->next != NULL){
+        qii = qii->next;
     }
 
     if(qii){

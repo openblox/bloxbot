@@ -54,31 +54,43 @@ static int _verify_certificate_callback(gnutls_session_t session){
     }
 }
 
-size_t _conn_tls_read(bloxbot_Conn* conn, char* buf, size_t count){
+/* This function is slightly deceiving!
+ * This function will only return after a complete line has been read.
+ */
+size_t _conn_tls_read(bloxbot_Conn* conn, char* buf, int count){
     if(!buf){
         return -1;
     }
 
     struct _conn_tls_ud* mode_ud = (struct _conn_tls_ud*)conn->ud;
 
-    int ret = gnutls_record_recv(mode_ud->session, buf, count);
+    int numRead = 0;
+    for(int i = 0; i < count; i++){
+        int ret = gnutls_record_recv(mode_ud->session, &buf[i], 1);
 
-    if(ret == 0){
-        return 0;
+        if(ret == 0){
+            return 0;
+        }
+
+        while(ret == GNUTLS_E_INTERRUPTED){
+            ret = gnutls_record_recv(mode_ud->session, &buf[i], 1);
+        }
+
+        if(ret < 0 && gnutls_error_is_fatal(ret) == 0){
+            fprintf(stderr, "Warning: %s\n", gnutls_strerror(ret));
+        }else if(ret < 0){
+            fprintf(stderr, "Error: %s\n", gnutls_strerror(ret));
+            return -1;
+        }
+
+        numRead++;
+        if(buf[i] == '\n'){
+            buf[i] = '\0';
+            break;
+        }
     }
 
-    if(ret == GNUTLS_E_INTERRUPTED || ret == GNUTLS_E_AGAIN){
-        return _conn_tls_read(conn, buf, count);
-    }
-
-    if(ret < 0 && gnutls_error_is_fatal(ret) == 0){
-        fprintf(stderr, "Warning: %s\n", gnutls_strerror(ret));
-    }else if(ret < 0){
-        fprintf(stderr, "Error: %s\n", gnutls_strerror(ret));
-        return -1;
-    }
-
-    return ret;
+    return numRead;
 }
 
 size_t _conn_tls_write(bloxbot_Conn* conn, char* buf, size_t count){

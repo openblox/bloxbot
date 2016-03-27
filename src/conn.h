@@ -30,7 +30,7 @@ extern unsigned char bb_useClientCert;
 
 typedef struct bloxbot_Conn bloxbot_Conn;
 
-typedef size_t (*bloxbot_read_fnc)(bloxbot_Conn* conn, char* buf, size_t count);
+typedef size_t (*bloxbot_read_fnc)(bloxbot_Conn* conn, char* buf, int count);
 typedef size_t (*bloxbot_write_fnc)(bloxbot_Conn* conn, char* buf, size_t count);
 typedef void (*bloxbot_close_fnc)(bloxbot_Conn* conn);
 

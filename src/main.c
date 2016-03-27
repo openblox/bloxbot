@@ -143,13 +143,11 @@ int handleLine(char* inBuffer, int lineLen){
                 int noticeFromLen = (int)(noticeFromEnd - noticeFrom);
 
                 char* noticeMsg = &noticeFromEnd[2];
-                printf("NOTICE: %.*s says: %s\n", noticeFromLen, noticeFrom, noticeMsg);
 
                 if(memcmp(noticeFrom, "Auth", 4) == 0){
-                    puts("It's Auth!");
                     if(strstr(noticeMsg, "Welcome to")){
-                        puts("Says welcome to!");
                         if(!doneInit){
+                            //TODO: Init hooks
                             blox_join("#OpenBlox");
                             doneInit = 1;
                         }
@@ -275,12 +273,11 @@ int main(int argc, char* argv[]){
     }
 
     char inBufferl[MAX_BUFFER_LEN+1];
-    char* inBuffer;
 
     int ret = 1;
     while(ret != -1 && stillConnected){
         _bb_run_queue();
-
+        bzero(inBufferl, MAX_BUFFER_LEN);
         ret = irc_conn->read(irc_conn, inBufferl, MAX_BUFFER_LEN);
 
         if(ret < 0){
@@ -293,26 +290,8 @@ int main(int argc, char* argv[]){
             break;
         }
 
-        size_t realEnd = 0;
-        size_t realStart = 0;
-
-        inBuffer = inBufferl;
-
-        unsigned char hadEnd = 0;
-        for(size_t i = 0; i < ret; i++){
-            if(inBuffer[i] == '\r'){
-                inBuffer[i] = '\0';
-                realEnd = i;
-
-                if(handleLine(inBuffer, realEnd)){
-                    return EXIT_FAILURE;
-                }
-                break;
-            }
-        }
-
-        if(!hadEnd){
-            continue;
+        if(handleLine(inBufferl, ret)){
+            return EXIT_FAILURE;
         }
     }
 

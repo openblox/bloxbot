@@ -19,14 +19,49 @@
 
 #include "plugin.h"
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
 #include <dlfcn.h>
 
+#include <glib.h>
+
+static GHashTable* pluginTable = NULL;
+
+static void _bb_destroy_plugin(void* vdPlug){
+    bloxbot_Plugin* plug = (bloxbot_Plugin*)vdPlug;
+    dlclose(plug->_handle);
+    free(plug);
+}
+
+void bb_unloadPlugin(char* name){
+    if(!name){
+        return;
+    }
+    if(!pluginTable){
+        return;
+    }
+    bloxbot_Plugin* oplug = (bloxbot_Plugin*)g_hash_table_lookup(pluginTable, name);
+    if(oplug){
+        oplug->deinit(oplug);
+        g_hash_table_remove(pluginTable, name);
+    }
+}
+
 bloxbot_Plugin* bb_loadPlugin(char* name){
     if(!name){
         return NULL;
+    }
+
+    if(!pluginTable){
+        pluginTable = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, _bb_destroy_plugin);
+    }
+
+    bloxbot_Plugin* oplug = (bloxbot_Plugin*)g_hash_table_lookup(pluginTable, name);
+    if(oplug){
+        printf("'%s' is already loaded.\n", name);
+        return oplug;
     }
 
     int nameLen = strlen(name);
@@ -65,12 +100,14 @@ bloxbot_Plugin* bb_loadPlugin(char* name){
     bloxbot_Plugin* plug = entryFnc();
     if(!plug){
         //Plugin itself should print more verbose error messages
-        fprintf(stderr, "Error loading plugin '%s\n", name);
+        fprintf(stderr, "Error loading plugin '%s'\n", name);
         dlclose(handle);
         return NULL;
     }
 
     plug->_handle = handle;
+
+    g_hash_table_insert(pluginTable, strdup(name), plug);
 
     return plug;
 }

@@ -6,4 +6,5 @@ bloxbot_SOURCES = main.c \
 	net_util.c \
 	conn_plain.c \
 	conn_tls.c
-bloxbot_LDADD = -lgnutls -ldl
+bloxbot_CPPFLAGS = -I/usr/include/glib-2.0 -I/usr/lib64/glib-2.0/include
+bloxbot_LDADD = -lgnutls -ldl -lglib-2.0
