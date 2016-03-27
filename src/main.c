@@ -207,14 +207,14 @@ int handleLine(char* inBuffer, int lineLen){
 
                         if(strcmp(ircCommand, "PRIVMSG") == 0){
                             //TODO: CTCP
-                            puts("PRIVMSG!");
-                            printf("Target: %s\n", target);
-                            if(target[0] == '#'){
-                                char* theMsg = strchr(&thirdSPCP[1], ':');
-                                printf("msg: \"%s\"", theMsg);
-                                _bb_hook(_BB_HOOK_MSG, target, srcNick, srcLogin, srcHost, theMsg);
-                            }else{
-                                
+                            char* theMsg = strchr(&secondSPCP[1], ':');
+                            if(theMsg){
+                                theMsg = &theMsg[1];
+                                if(target[0] == '#'){
+                                    _bb_hook(_BB_HOOK_MSG, target, srcNick, srcLogin, srcHost, theMsg);
+                                }else{
+                                    _bb_hook(_BB_HOOK_PRIVMSG, srcNick, srcLogin, srcHost, theMsg);
+                                }
                             }
                         }
 
