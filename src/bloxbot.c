@@ -24,6 +24,18 @@
 #include <stdio.h>
 #include <string.h>
 
+
+#include <pthread.h>
+
+pthread_mutex_t _sock_lock;
+
+void _bb_init_bb(){
+    if(pthread_mutex_init(&_sock_lock, NULL) != 0){
+        puts("Failed to initialize mutex.");
+        exit(EXIT_FAILURE);
+    }
+}
+
 int blox_sendDirectlyl(char* line, int len){
     if(!irc_conn){
         return -1;
@@ -32,7 +44,10 @@ int blox_sendDirectlyl(char* line, int len){
         return 0;
     }
     printf(">> %.*s", len, line);
-    return irc_conn->write(irc_conn, line, len);
+    pthread_mutex_lock(&_sock_lock);
+    int ret = irc_conn->write(irc_conn, line, len);
+    pthread_mutex_unlock(&_sock_lock);
+    return ret;
 }
 
 int blox_sendDirectly(char* line){

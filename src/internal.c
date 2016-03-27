@@ -27,9 +27,22 @@
 
 #include <sys/time.h>
 
+#include <pthread.h>
+
+pthread_mutex_t _internal_lock;
+
+void _bb_init_internal(){
+    if(pthread_mutex_init(&_internal_lock, NULL) != 0){
+        puts("Failed to initialize mutex.");
+        exit(EXIT_FAILURE);
+    }
+}
+
 struct bb_QueueItem* curQueue = NULL;
 
 void _bb_run_queue(){
+    pthread_mutex_lock(&_internal_lock);
+
     long int cT = _bb_curtime();
     if((cT - irc_last_msg) > BB_MSG_DEBUF){
         if(curQueue){
@@ -44,12 +57,17 @@ void _bb_run_queue(){
             irc_last_msg = cT;
         }
     }
+
+    pthread_mutex_unlock(&_internal_lock);
 }
 
 void _bb_push_queue(char* line){
     if(!line){
         return;
     }
+
+    pthread_mutex_lock(&_internal_lock);
+
     struct bb_QueueItem* qi = malloc(sizeof(struct bb_QueueItem));
     if(!qi){
         puts("Out of memory");
@@ -61,6 +79,7 @@ void _bb_push_queue(char* line){
 
     if(!curQueue){
         curQueue = qi;
+        pthread_mutex_unlock(&_internal_lock);
         return;
     }
 
@@ -72,6 +91,8 @@ void _bb_push_queue(char* line){
     if(qii){
         qii->next = qi;
     }
+
+    pthread_mutex_unlock(&_internal_lock);
 }
 
 long int _bb_curtime(){

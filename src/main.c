@@ -124,6 +124,12 @@ int handleLine(char* inBuffer, int lineLen){
     }
 
     if(inBuffer[0] == ':'){
+        char* excla = strchr(inBuffer, '!');
+        char* atSign = strchr(inBuffer, '@');
+        if(excla > 0){
+
+        }
+
         char* strCode_ = strchr(inBuffer, ' ');
         if(strlen(strCode_) > 3){
             char* strCode = malloc(4);
@@ -255,6 +261,10 @@ int main(int argc, char* argv[]){
 
     //Init
     gnutls_global_init();
+
+    _bb_init_bb();
+    _bb_init_internal();
+
     bb_loadPlugin("ob");
 
     //Actually do the connection

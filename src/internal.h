@@ -33,7 +33,8 @@ struct bb_QueueItem{
     struct bb_QueueItem* next;
 };
 
-//TODO: Thread safety
+void _bb_init_internal();
+
 void _bb_run_queue();
 void _bb_push_queue(char* line);
 long int _bb_curtime();
