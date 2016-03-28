@@ -29,11 +29,23 @@
 #include <glib.h>
 
 GHashTable* pluginTable = NULL;
+GHashTable* cmdTable = NULL;
+
+struct _bb_Cmd{
+    bloxbot_Plugin* plug;
+    char* cmdName;
+    bloxbot_plugin_cmd_fnc cmdFnc;
+};
 
 static void _bb_destroy_plugin(void* vdPlug){
     bloxbot_Plugin* plug = (bloxbot_Plugin*)vdPlug;
     dlclose(plug->_handle);
     free(plug);
+}
+
+void _bb_plugin_init(){
+    pluginTable = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, _bb_destroy_plugin);
+    cmdTable = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 }
 
 void bb_unloadPlugin(char* name){
@@ -53,10 +65,6 @@ void bb_unloadPlugin(char* name){
 bloxbot_Plugin* bb_loadPlugin(char* name){
     if(!name){
         return NULL;
-    }
-
-    if(!pluginTable){
-        pluginTable = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, _bb_destroy_plugin);
     }
 
     bloxbot_Plugin* oplug = (bloxbot_Plugin*)g_hash_table_lookup(pluginTable, name);
@@ -129,16 +137,32 @@ bloxbot_Plugin* bb_loadPlugin(char* name){
     plug->on_msg = dlsym(handle, plug_sym_name);
 
     strcpy(plug_symn, "on_privmsg");
-    plug->on_msg = dlsym(handle, plug_sym_name);
+    plug->on_privmsg = dlsym(handle, plug_sym_name);
+
+    strcpy(plug_symn, "on_servercode");
+    plug->on_servercode = dlsym(handle, plug_sym_name);
 
     g_hash_table_insert(pluginTable, strdup(name), plug);
 
     return plug;
 }
 
+int bb_addCommand(bloxbot_Plugin* plug, char* cmdName, bloxbot_plugin_cmd_fnc cmdFnc){
+    return 0;
+}
+
+int bb_addAlias(char* aliasName, char* cmdName){
+    return 0;
+}
+
+int bb_removeCommand(char* cmdName){
+    return 0;
+}
+
 struct _bb_hook_info{
     va_list argp;
     int hook_id;
+    int* toRet;
 };
 
 static void _bb_for_each_hook(void* vdName, void* vdPlug, void* ud){
@@ -151,6 +175,10 @@ static void _bb_for_each_hook(void* vdName, void* vdPlug, void* ud){
 
     bloxbot_Plugin* plug = (bloxbot_Plugin*)vdPlug;
     struct _bb_hook_info* hookinfo = (struct _bb_hook_info*)ud;
+
+    if(*(hookinfo->toRet) != BB_RET_OK){
+        return;
+    }
 
     switch(hookinfo->hook_id){
         case _BB_HOOK_INIT: {
@@ -167,31 +195,50 @@ static void _bb_for_each_hook(void* vdName, void* vdPlug, void* ud){
         }
         case _BB_HOOK_MSG: {
             if(plug->on_msg){
-                plug->on_msg(plug, va_arg(hookinfo->argp, char*), va_arg(hookinfo->argp, char*), va_arg(hookinfo->argp, char*), va_arg(hookinfo->argp, char*), va_arg(hookinfo->argp, char*));
+                int ret = plug->on_msg(plug, va_arg(hookinfo->argp, char*), va_arg(hookinfo->argp, char*), va_arg(hookinfo->argp, char*), va_arg(hookinfo->argp, char*), va_arg(hookinfo->argp, char*));
+                if(ret != BB_RET_OK){
+                    *(hookinfo->toRet) = ret;
+                }
             }
             break;
         }
         case _BB_HOOK_PRIVMSG: {
             if(plug->on_privmsg){
-                plug->on_privmsg(plug, va_arg(hookinfo->argp, char*), va_arg(hookinfo->argp, char*), va_arg(hookinfo->argp, char*), va_arg(hookinfo->argp, char*));
+                int ret = plug->on_privmsg(plug, va_arg(hookinfo->argp, char*), va_arg(hookinfo->argp, char*), va_arg(hookinfo->argp, char*), va_arg(hookinfo->argp, char*));
+                if(ret != BB_RET_OK){
+                    *(hookinfo->toRet) = ret;
+                }
+            }
+            break;
+        }
+        case _BB_HOOK_SERVERCODE: {
+            if(plug->on_servercode){
+                int ret = plug->on_servercode(plug, va_arg(hookinfo->argp, char*), va_arg(hookinfo->argp, int), va_arg(hookinfo->argp, char*));
+                if(ret != BB_RET_OK){
+                    *(hookinfo->toRet) = ret;
+                }
             }
             break;
         }
     }
 }
 
-void _bb_hook(int hook_id, ...){
+int _bb_hook(int hook_id, ...){
     if(!pluginTable){
-        return;
+        return BB_RET_ERR;
     }
 
     struct _bb_hook_info* hookinfo = malloc(sizeof(struct _bb_hook_info));
     if(!hookinfo){
         puts("Out of memory");
         exit(EXIT_FAILURE);
-        return;//Not necessary, but stops some stupid compilers from giving warnings
+        return BB_RET_ERR;//Not necessary, but stops some stupid compilers from giving warnings
     }
     hookinfo->hook_id = hook_id;
+
+    int toRet = BB_RET_OK;
+    int* toRetP = &toRet;
+    hookinfo->toRet = toRetP;
 
     va_start(hookinfo->argp, hook_id);
 
@@ -200,4 +247,6 @@ void _bb_hook(int hook_id, ...){
     free(hookinfo);
 
     va_end(hookinfo->argp);
+
+    return toRet;
 }

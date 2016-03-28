@@ -147,11 +147,6 @@ int handleLine(char* inBuffer, int lineLen){
             memcpy(srcNick, &inBuffer[1], srcNickLen);
             srcNick[srcNickLen] = '\0';
 
-            srcLogin = malloc(1);
-            srcLogin[0] = '\0';
-            srcHost = malloc(1);
-            srcHost[0] = '\0';
-
             char* strCode_ = strchr(inBuffer, ' ');
             if(strlen(strCode_) > 3){
                 char* strCode = malloc(4);
@@ -165,79 +160,96 @@ int handleLine(char* inBuffer, int lineLen){
 
                 free(strCode);
 
-                if(ircCode == 376){//End of MOTD
-                    _bb_hook(_BB_HOOK_INIT);
+                char* startMsg = strchr(&strCode_[1], ':');
+                if(startMsg){
+                    startMsg = &startMsg[1];
 
-                    free(srcNick);
-                    free(srcLogin);
-                    free(srcHost);
-                    return 0;
+                    int ret = _bb_hook(_BB_HOOK_SERVERCODE, srcNick, ircCode, startMsg);
+                    if(ret == BB_RET_STOP){
+                        free(srcNick);
+                        return 0;
+                    }
                 }
-            }
-        }else{
-            if(excla > 0 && atSign > 0 && excla < atSign){
-                int srcNickLen = excla - 1;
-                srcNick = malloc(excla);
-                memcpy(srcNick, &inBuffer[1], srcNickLen);
-                srcNick[srcNickLen] = '\0';
+            }else{
+                if(excla > 0 && atSign > 0 && excla < atSign){
+                    int srcNickLen = excla - 1;
+                    srcNick = malloc(excla);
+                    memcpy(srcNick, &inBuffer[1], srcNickLen);
+                    srcNick[srcNickLen] = '\0';
 
-                int srcLoginLen = atSign - excla - 1;
-                srcLogin = malloc(srcLoginLen + 1);
-                memcpy(srcLogin, &inBuffer[excla + 1], srcLoginLen);
-                srcLogin[srcLoginLen] = '\0';
+                    int srcLoginLen = atSign - excla - 1;
+                    srcLogin = malloc(srcLoginLen + 1);
+                    memcpy(srcLogin, &inBuffer[excla + 1], srcLoginLen);
+                    srcLogin[srcLoginLen] = '\0';
 
-                int srcHostLen = firstSPC - atSign - 1;
-                srcHost = malloc(srcHostLen + 1);
-                memcpy(srcHost, &inBuffer[atSign + 1], srcHostLen);
-                srcHost[srcHostLen] = '\0';
+                    int srcHostLen = firstSPC - atSign - 1;
+                    srcHost = malloc(srcHostLen + 1);
+                    memcpy(srcHost, &inBuffer[atSign + 1], srcHostLen);
+                    srcHost[srcHostLen] = '\0';
 
-                char* secondSPCP = strchr(&firstSPCP[1], ' ');
-                if(secondSPCP){
-                    int ircCommandLen = (int)(secondSPCP - firstSPCP) - 1;
-                    char* ircCommand = malloc(ircCommandLen + 1);
-                    memcpy(ircCommand, &firstSPCP[1], ircCommandLen);
-                    ircCommand[ircCommandLen] = '\0';
+                    char* secondSPCP = strchr(&firstSPCP[1], ' ');
+                    if(secondSPCP){
+                        int ircCommandLen = (int)(secondSPCP - firstSPCP) - 1;
+                        char* ircCommand = malloc(ircCommandLen + 1);
+                        memcpy(ircCommand, &firstSPCP[1], ircCommandLen);
+                        ircCommand[ircCommandLen] = '\0';
 
-                    char* thirdSPCP = strchr(&secondSPCP[1], ' ');
-                    if(thirdSPCP){
-                        int targetLen = (int)(thirdSPCP - secondSPCP) - 1;
-                        char* target = malloc(targetLen + 1);
-                        memcpy(target, &secondSPCP[1], targetLen);
-                        target[targetLen] = '\0';
+                        char* thirdSPCP = strchr(&secondSPCP[1], ' ');
+                        if(thirdSPCP){
+                            int targetLen = (int)(thirdSPCP - secondSPCP) - 1;
+                            char* target = malloc(targetLen + 1);
+                            memcpy(target, &secondSPCP[1], targetLen);
+                            target[targetLen] = '\0';
 
-                        if(strcmp(ircCommand, "PRIVMSG") == 0){
-                            //TODO: CTCP
-                            char* theMsg = strchr(&secondSPCP[1], ':');
-                            if(theMsg){
-                                theMsg = &theMsg[1];
-                                if(target[0] == '#'){
-                                    _bb_hook(_BB_HOOK_MSG, target, srcNick, srcLogin, srcHost, theMsg);
-                                }else{
-                                    _bb_hook(_BB_HOOK_PRIVMSG, srcNick, srcLogin, srcHost, theMsg);
+                            if(strcmp(ircCommand, "PRIVMSG") == 0){
+                                //TODO: CTCP
+                                char* theMsg = strchr(&secondSPCP[1], ':');
+                                if(theMsg){
+                                    theMsg = &theMsg[1];
+                                    if(target[0] == '#'){
+                                        int ret = _bb_hook(_BB_HOOK_MSG, target, srcNick, srcLogin, srcHost, theMsg);
+                                        if(ret == BB_RET_STOP){
+                                            free(target);
+                                            free(ircCommand);
+                                            free(srcNick);
+                                            free(srcLogin);
+                                            free(srcHost);
+                                            return 0;
+                                        }
+                                    }else{
+                                        int ret = _bb_hook(_BB_HOOK_PRIVMSG, srcNick, srcLogin, srcHost, theMsg);
+                                        if(ret == BB_RET_STOP){
+                                            free(target);
+                                            free(ircCommand);
+                                            free(srcNick);
+                                            free(srcLogin);
+                                            free(srcHost);
+                                            return 0;
+                                        }
+                                    }
                                 }
                             }
-                        }
 
-                        free(target);
+                            free(target);
+                        }
+                        free(ircCommand);
                     }
-                    free(ircCommand);
                 }
             }
-        }
 
-        if(srcNick){
-            free(srcNick);
-        }
+            if(srcNick){
+                free(srcNick);
+            }
 
-        if(srcLogin){
-            free(srcLogin);
-        }
+            if(srcLogin){
+                free(srcLogin);
+            }
 
-        if(srcHost){
-            free(srcHost);
+            if(srcHost){
+                free(srcHost);
+            }
         }
     }
-
     return 0;
 }
 
@@ -333,8 +345,11 @@ int main(int argc, char* argv[]){
 
     _bb_init_bb();
     _bb_init_internal();
+    _bb_plugin_init();
 
     bb_loadPlugin("ob");
+
+    _bb_hook(_BB_HOOK_INIT);
 
     //Actually do the connection
     bloxbot_open_fnc connFunc = NULL;

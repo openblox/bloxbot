@@ -27,27 +27,48 @@ typedef struct bloxbot_Plugin bloxbot_Plugin;
 
 typedef void (*bloxbot_plugin_init_fnc)(bloxbot_Plugin* plugin);
 typedef void (*bloxbot_plugin_deinit_fnc)(bloxbot_Plugin* plugin);
-typedef void (*bloxbot_plugin_msg_fnc)(bloxbot_Plugin* plugin, char* target, char* srcNick, char* srcLogin, char* srcHost, char* msg);
-typedef void (*bloxbot_plugin_privmsg_fnc)(bloxbot_Plugin* plugin, char* srcNick, char* srcLogin, char* srcHost, char* msg);
 
-#define _BB_LONGEST_SYM_LEN 10
+//Continue processing other hooks
+#define BB_RET_OK 0
+#define BB_RET_ERR 1
+//Stops processing after this hook returns
+#define BB_RET_STOP 2
+
+typedef int (*bloxbot_plugin_msg_fnc)(bloxbot_Plugin* plugin, char* target, char* srcNick, char* srcLogin, char* srcHost, char* msg);
+typedef int (*bloxbot_plugin_privmsg_fnc)(bloxbot_Plugin* plugin, char* srcNick, char* srcLogin, char* srcHost, char* msg);
+typedef int (*bloxbot_plugin_servercode_fnc)(bloxbot_Plugin* plugin, char* src, int code, char* msg);
+
+typedef void (*bloxbot_plugin_cmd_fnc)(bloxbot_Plugin* plugin, char* target, char* srcNick, char* srcLogin, char* srcHost, unsigned char isPublic, char* cmd, int argc, char* argv[]);
+
+#define _BB_LONGEST_SYM_LEN 13
 
 typedef struct bloxbot_Plugin{
     void* _handle;//DO NOT USE THIS IN PLUGIN CODE!
+
     void* ud;
+
     bloxbot_plugin_init_fnc init;
     bloxbot_plugin_deinit_fnc deinit;
+
     bloxbot_plugin_msg_fnc on_msg;
     bloxbot_plugin_privmsg_fnc on_privmsg;
+    bloxbot_plugin_servercode_fnc on_servercode;
 } bloxbot_Plugin;
 
+void _bb_plugin_init();
+
 bloxbot_Plugin* bb_loadPlugin(char* name);
+
+int bb_addCommand(bloxbot_Plugin* plug, char* cmdName, bloxbot_plugin_cmd_fnc cmdFnc);
+int bb_addAlias(char* aliasName, char* cmdName);
+int bb_removeCommand(char* cmdName);
 
 #define _BB_HOOK_INIT 1
 #define _BB_HOOK_DEINIT 2
 #define _BB_HOOK_MSG 3
 #define _BB_HOOK_PRIVMSG 4
+#define _BB_HOOK_SERVERCODE 5
 
-void _bb_hook(int hook_id, ...);
+int _bb_hook(int hook_id, ...);
 
 #endif
