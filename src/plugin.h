@@ -43,31 +43,32 @@ typedef void (*bloxbot_plugin_cmd_fnc)(bloxbot_Plugin* plugin, char* target, cha
 #define _BB_LONGEST_SYM_LEN 13
 
 typedef struct bloxbot_Plugin{
-    void* _handle;//DO NOT USE THIS IN PLUGIN CODE!
+	void* _handle;//DO NOT USE THIS IN PLUGIN CODE!
 
-    void* ud;
+	//Feel free to set this to whatever you like, it is not used internally. It is here entirely for plugin use.
+	void* ud;
 
-    bloxbot_plugin_init_fnc init;
-    bloxbot_plugin_deinit_fnc deinit;
+	bloxbot_plugin_init_fnc init;
+	bloxbot_plugin_deinit_fnc deinit;
 
-    bloxbot_plugin_msg_fnc on_msg;
-    bloxbot_plugin_privmsg_fnc on_privmsg;
-    bloxbot_plugin_servercode_fnc on_servercode;
+	bloxbot_plugin_msg_fnc on_msg;
+	bloxbot_plugin_privmsg_fnc on_privmsg;
+	bloxbot_plugin_servercode_fnc on_servercode;
 } bloxbot_Plugin;
 
 void _bb_plugin_init();
 
+void bb_unloadPlugin(char* name);
 bloxbot_Plugin* bb_loadPlugin(char* name);
+void bb_reloadPlugins();
 
 int bb_addCommand(bloxbot_Plugin* plug, char* cmdName, bloxbot_plugin_cmd_fnc cmdFnc);
 int bb_addAlias(char* aliasName, char* cmdName);
 int bb_removeCommand(char* cmdName);
 
-#define _BB_HOOK_INIT 1
-#define _BB_HOOK_DEINIT 2
-#define _BB_HOOK_MSG 3
-#define _BB_HOOK_PRIVMSG 4
-#define _BB_HOOK_SERVERCODE 5
+#define _BB_HOOK_MSG 1
+#define _BB_HOOK_PRIVMSG 2
+#define _BB_HOOK_SERVERCODE 3
 
 int _bb_hook(int hook_id, ...);
 

@@ -206,6 +206,11 @@ int handleLine(char* inBuffer, int lineLen){
                                 char* theMsg = strchr(&secondSPCP[1], ':');
                                 if(theMsg){
                                     theMsg = &theMsg[1];
+
+									if(strcmp(theMsg, "!reload") == 0 && strcmp(srcLogin, "johnmh") == 0 && strcmp(srcHost, "openblox/dev/JohnMH")){
+										bb_reloadPlugins();
+									}
+
                                     if(target[0] == '#'){
                                         int ret = _bb_hook(_BB_HOOK_MSG, target, srcNick, srcLogin, srcHost, theMsg);
                                         if(ret == BB_RET_STOP){
@@ -349,8 +354,6 @@ int main(int argc, char* argv[]){
 
     bb_loadPlugin("ob");
 
-    _bb_hook(_BB_HOOK_INIT);
-
     //Actually do the connection
     bloxbot_open_fnc connFunc = NULL;
 
@@ -390,8 +393,6 @@ int main(int argc, char* argv[]){
     }
 
     stillConnected = 0;
-
-    _bb_hook( _BB_HOOK_DEINIT);
 
     return EXIT_SUCCESS;
 }

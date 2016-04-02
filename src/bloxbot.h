@@ -31,6 +31,7 @@ void _bb_init_bb();
 int blox_sendDirectlyl(char* line, int len);
 int blox_sendDirectly(char* line);
 int blox_send(char* line);
+int blox_sendMsg(char* target, char* msg);
 int blox_join(char* chan);
 //TODO: Support channels with passwords?
 int blox_part(char* chan);
