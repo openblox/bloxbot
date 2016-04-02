@@ -104,7 +104,7 @@ int blox_join(char* chan){
     strcat(line, chan);
     strcat(line, "\r\n");
 
-    return blox_send(line);
+    return blox_sendDirectly(line);
 }
 
 int blox_part(char* chan){
@@ -117,7 +117,7 @@ int blox_part(char* chan){
     strcat(line, chan);
     strcat(line, "\r\n");
 
-    return blox_send(line);
+    return blox_sendDirectly(line);
 }
 
 int blox_partr(char* chan, char* reason){
@@ -133,7 +133,7 @@ int blox_partr(char* chan, char* reason){
     strcat(line, reason);
     strcat(line, "\r\n");
 
-    return blox_send(line);
+    return blox_sendDirectly(line);
 }
 
 int blox_pong(char* servName){
