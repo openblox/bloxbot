@@ -28,6 +28,8 @@
 #include <string.h>
 
 #include <getopt.h>
+#include <pthread.h>
+#include <unistd.h>
 
 #include <gnutls/gnutls.h>
 
@@ -44,6 +46,17 @@ char* irc_gecos = NULL;
 
 unsigned char doneReg = 0;
 unsigned char capStage = 0;
+
+pthread_t queueThread;
+
+void* queueThreadFnc(void* ud){
+	while(stillConnected){
+		_bb_run_queue();
+		usleep(250 * 1000);//250 milliseconds * 100 to convert to microseconds
+	}
+
+	return ud;//This means NULL
+}
 
 int handleLine(char* inBuffer, int lineLen){
     //SASL EXTERNAL
@@ -371,10 +384,15 @@ int main(int argc, char* argv[]){
 
     char inBufferl[MAX_BUFFER_LEN+1];
 
-    int ret = 1;
+	int ret = pthread_create(&queueThread, NULL, queueThreadFnc, NULL);
+	if(ret){
+		puts("Error: Failed to create queue thread");
+		exit(EXIT_FAILURE);
+	}
+
+    ret = 1;
     while(ret != -1 && stillConnected){
-        _bb_run_queue();
-        bzero(inBufferl, MAX_BUFFER_LEN);
+        //bzero(inBufferl, MAX_BUFFER_LEN);
         ret = irc_conn->read(irc_conn, inBufferl, MAX_BUFFER_LEN);
 
         if(ret < 0){
