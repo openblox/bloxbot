@@ -282,6 +282,9 @@ int main(int argc, char* argv[]){
         {"help", no_argument, 0, 'h'},
         {"no-tls-verification", no_argument, 0, 'N'},
         {"verbose", no_argument, 0, 'V'},
+		{"user", required_argument, 0, 'u'},
+		{"nick", required_argument, 0, 'n'}
+		{"gecos", required_argument, 0, 'g'}
         {0, 0, 0, 0}
     };
 
@@ -289,7 +292,7 @@ int main(int argc, char* argv[]){
 
     int c;
     while(1){
-        c = getopt_long(argc, argv, "vhNV", long_opts, &opt_idx);
+        c = getopt_long(argc, argv, "vhNVun", long_opts, &opt_idx);
 
         if(c == -1){
             break;
@@ -310,6 +313,9 @@ int main(int argc, char* argv[]){
             case 'h': {
                 puts(PACKAGE_NAME " - Advanced IRC bot");
                 printf("Usage: %s [options]\n", argv[0]);
+				puts("   -n, --nick                  Sets the nickname to be used");
+				puts("   -u, --user                  Sets the username to be used");
+				puts("   -g, --gecos                 Sets the gecos field to be used");
                 puts("");
                 puts("   -N, --no-tls-verification   Disables TLS server verification");
                 puts("");
@@ -335,6 +341,27 @@ int main(int argc, char* argv[]){
                 bb_isVerbose = !bb_isVerbose;
                 break;
             }
+			case 'n': {
+				if(irc_nick){
+					free(irc_nick);
+				}
+				irc_nick = strdup(optopt);
+				break;
+			}
+			case 'u': {
+				if(irc_user){
+					free(irc_user);
+				}
+				irc_user = strdup(optopt);
+				break;
+			}
+			case 'g' : {
+				if(irc_gecos){
+					free(irc_gecos);
+				}
+				irc_gecos = strdup(optopt);
+				break;
+			}
             case '?': {
                 //getopt already handled it
                 exit(EXIT_FAILURE);
@@ -348,6 +375,12 @@ int main(int argc, char* argv[]){
 
     //TODO: Read config from configuration file
 
+	if(irc_nick && !irc_user){
+		irc_user = strdup(irc_nick);
+	}else if(irc_user && !irc_nick){
+		irc_nick = strdup(irc_user);
+	}
+	
     if(!irc_user){
         irc_user = "bloxbot";
     }
