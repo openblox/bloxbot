@@ -283,8 +283,8 @@ int main(int argc, char* argv[]){
         {"no-tls-verification", no_argument, 0, 'N'},
         {"verbose", no_argument, 0, 'V'},
 		{"user", required_argument, 0, 'u'},
-		{"nick", required_argument, 0, 'n'}
-		{"gecos", required_argument, 0, 'g'}
+		{"nick", required_argument, 0, 'n'},
+		{"gecos", required_argument, 0, 'g'},
         {0, 0, 0, 0}
     };
 
