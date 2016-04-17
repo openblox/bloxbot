@@ -44,6 +44,9 @@ char* irc_user = NULL;
 char* irc_nick = NULL;
 char* irc_gecos = NULL;
 
+char* ns_user = NULL;
+char* ns_pass = NULL;
+
 unsigned char doneReg = 0;
 unsigned char capStage = 0;
 
@@ -271,9 +274,22 @@ int handleLine(char* inBuffer, int lineLen){
     return 0;
 }
 
+void cleanup(){
+	free(irc_user);
+	free(irc_nick);
+	free(irc_gecos);
+		
+	if(ns_pass){
+		free(ns_pass);
+		if(ns_user){
+			free(ns_user);
+		}
+	}
+}
+
 int main(int argc, char* argv[]){
     //TODO: Configuration
-    char* server = "irc.openblox.org";
+    char* server = strdup("irc.openblox.org");
     int port = 6697;
     unsigned char useTLS = 1;
 
@@ -285,6 +301,8 @@ int main(int argc, char* argv[]){
 		{"user", required_argument, 0, 'u'},
 		{"nick", required_argument, 0, 'n'},
 		{"gecos", required_argument, 0, 'g'},
+		{"ns-user", required_argument, 0, 'U'},
+		{"ns-pass", required_argument, 0, 'P'},
         {0, 0, 0, 0}
     };
 
@@ -292,7 +310,7 @@ int main(int argc, char* argv[]){
 
     int c;
     while(1){
-        c = getopt_long(argc, argv, "vhNVun", long_opts, &opt_idx);
+        c = getopt_long(argc, argv, "vhNVu:n:g:U:P:", long_opts, &opt_idx);
 
         if(c == -1){
             break;
@@ -316,6 +334,9 @@ int main(int argc, char* argv[]){
 				puts("   -n, --nick                  Sets the nickname to be used");
 				puts("   -u, --user                  Sets the username to be used");
 				puts("   -g, --gecos                 Sets the gecos field to be used");
+				puts("");
+				puts("   -U, --ns-user               Sets the nickserv user to identify as");
+				puts("   -P, --ns-pass               Sets the nickserv password use");
                 puts("");
                 puts("   -N, --no-tls-verification   Disables TLS server verification");
                 puts("");
@@ -345,29 +366,72 @@ int main(int argc, char* argv[]){
 				if(irc_nick){
 					free(irc_nick);
 				}
-				irc_nick = strdup(optopt);
+				irc_nick = strdup(optarg);
 				break;
 			}
 			case 'u': {
 				if(irc_user){
 					free(irc_user);
 				}
-				irc_user = strdup(optopt);
+				irc_user = strdup(optarg);
 				break;
 			}
 			case 'g' : {
 				if(irc_gecos){
 					free(irc_gecos);
 				}
-				irc_gecos = strdup(optopt);
+				irc_gecos = strdup(optarg);
+				break;
+			}
+			case 'U': {
+				if(ns_user){
+					free(ns_user);
+				}
+				ns_user = strdup(optarg);
+				break;
+			}
+			case 'P': {
+			    if(ns_pass){
+					free(ns_pass);
+				}
+				ns_pass = strdup(optarg);
 				break;
 			}
             case '?': {
-                //getopt already handled it
+				if(irc_nick){
+					free(irc_nick);
+				}
+				if(irc_user){
+					free(irc_user);
+				}
+				if(irc_gecos){
+					free(irc_gecos);
+				}
+				if(ns_user){
+					free(ns_user);
+				}
+				if(ns_pass){
+					free(ns_pass);
+				}
                 exit(EXIT_FAILURE);
                 break;
             }
             default: {
+				if(irc_nick){
+					free(irc_nick);
+				}
+				if(irc_user){
+					free(irc_user);
+				}
+				if(irc_gecos){
+					free(irc_gecos);
+				}
+				if(ns_user){
+					free(ns_user);
+				}
+				if(ns_pass){
+					free(ns_pass);
+				}
                 exit(EXIT_FAILURE);
             }
         }
@@ -382,14 +446,19 @@ int main(int argc, char* argv[]){
 	}
 	
     if(!irc_user){
-        irc_user = "bloxbot";
+        irc_user = strdup("bloxbot");
     }
     if(!irc_nick){
-        irc_nick = "bloxbot";
+        irc_nick = strdup("bloxbot");
     }
     if(!irc_gecos){
-        irc_gecos = "OpenBlox Utility Bot v" PACKAGE_VERSION;
+        irc_gecos = strdup("OpenBlox Utility Bot v" PACKAGE_VERSION);
     }
+
+	if(ns_user && !ns_pass){
+		free(ns_user);
+		ns_user = NULL;
+	}
 
     //Init
     gnutls_global_init();
@@ -412,6 +481,8 @@ int main(int argc, char* argv[]){
     irc_conn = connFunc(server, port);
 
     if(!irc_conn){
+	    cleanup();
+		
         return EXIT_FAILURE;
     }
 
@@ -419,6 +490,8 @@ int main(int argc, char* argv[]){
 
 	int ret = pthread_create(&queueThread, NULL, queueThreadFnc, NULL);
 	if(ret){
+	    cleanup();
+		
 		puts("Error: Failed to create queue thread");
 		exit(EXIT_FAILURE);
 	}
@@ -429,6 +502,8 @@ int main(int argc, char* argv[]){
         ret = irc_conn->read(irc_conn, inBufferl, MAX_BUFFER_LEN);
 
         if(ret < 0){
+		    cleanup();
+			
             exit(EXIT_FAILURE);
             break;//Obviously this isn't necessary
         }
@@ -439,6 +514,8 @@ int main(int argc, char* argv[]){
         }
 
         if(handleLine(inBufferl, ret)){
+		    cleanup();
+			
             return EXIT_FAILURE;
         }
     }
