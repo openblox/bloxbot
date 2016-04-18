@@ -33,3 +33,4 @@
 /plugins/*/*.o
 /plugins/*/*.la
 /plugins/*/*_la-*
+/bb-in
