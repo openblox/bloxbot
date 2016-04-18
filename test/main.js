@@ -18,6 +18,8 @@ cli.on("motd", function(){
 
 cli.on("join#bloxbottest", function(nick){
 	if(nick === "bloxboot"){
+		//TODO: Real testing.
 		cli.say("#bloxbottest", "!quit");
+		process.exit(0);
 	}
 });
