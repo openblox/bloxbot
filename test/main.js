@@ -20,6 +20,13 @@ cli.on("join#bloxbottest", function(nick){
 	if(nick === "bloxboot"){
 		//TODO: Real testing.
 		cli.say("#bloxbottest", "!quit");
-		process.exit(0);
+		
+		setTimeout(function(){
+			cli.disconnect("Test over");
+			
+			setTimeout(function(){
+				process.exit(0);
+			}, 1000);
+		}, 1000);
 	}
 });
