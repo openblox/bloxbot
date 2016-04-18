@@ -16,9 +16,14 @@ cli.on("motd", function(){
 	cli.say("NickServ", "IDENTIFY bloxboot " + process.env["BB_PASSWD"]);
 });
 
+var didSayOnce = false;
+
 cli.on("join#bloxbottest", function(nick){
-	if(nick === "bloxboot"){
+	if(nick === "bloxboot" && !didSayOnce){
+		didSayOnce = true;
+		
 		//TODO: Real testing.
+		
 		cli.say("#bloxbottest", "!quit");
 		
 		setTimeout(function(){
