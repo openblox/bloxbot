@@ -31,6 +31,8 @@
 #include <pthread.h>
 #include <unistd.h>
 
+#include <glib.h>
+
 #include <gnutls/gnutls.h>
 
 static unsigned char stillConnected = 1;
@@ -40,12 +42,18 @@ unsigned char bb_useClientCert = 1;
 bloxbot_Conn* irc_conn = NULL;
 long int irc_last_msg = 0;
 
+char* _bbinPath = NULL;
+int _bboutPort = 14425;
+
 char* irc_user = NULL;
 char* irc_nick = NULL;
 char* irc_gecos = NULL;
 
 char* ns_user = NULL;
 char* ns_pass = NULL;
+
+char* join_str = NULL;
+int join_strl = 0;
 
 unsigned char doneReg = 0;
 unsigned char capStage = 0;
@@ -62,6 +70,11 @@ void* queueThreadFnc(void* ud){
 }
 
 int handleLine(char* inBuffer, int lineLen){
+	char* firstR = strchr(inBuffer, '\r');
+	if(firstR){
+		firstR[0] = '\0';
+	}
+	
     //SASL EXTERNAL
     if(bb_isVerbose){
         fwrite(inBuffer, sizeof(char), lineLen, stdout);
@@ -180,82 +193,114 @@ int handleLine(char* inBuffer, int lineLen){
                 if(startMsg){
                     startMsg = &startMsg[1];
 
+					if(ircCode == 266){
+						if(!bb_useClientCert && ns_user && ns_pass){
+							char identLine[10 + strlen(ns_user) + strlen(ns_pass)];
+							strcpy(identLine, "IDENTIFY ");
+							strcat(identLine, ns_user);
+							strcat(identLine, " ");
+							strcat(identLine, ns_pass);
+							blox_sendMsg("NickServ", identLine);
+						}
+						
+						if(join_str){
+							blox_sendDirectly(join_str);
+							
+							free(join_str);
+							join_str = NULL;
+						}
+					}
+
+					if(ircCode == 433){
+						puts(startMsg);
+						blox_sendDirectly("QUIT :Error detected\r\n");
+						return 1;
+					}
+
                     int ret = _bb_hook(_BB_HOOK_SERVERCODE, srcNick, ircCode, startMsg);
                     if(ret == BB_RET_STOP){
                         free(srcNick);
                         return 0;
                     }
                 }
-            }else{
-                if(excla > 0 && atSign > 0 && excla < atSign){
-                    int srcNickLen = excla - 1;
-                    srcNick = malloc(excla);
-                    memcpy(srcNick, &inBuffer[1], srcNickLen);
-                    srcNick[srcNickLen] = '\0';
-
-                    int srcLoginLen = atSign - excla - 1;
-                    srcLogin = malloc(srcLoginLen + 1);
-                    memcpy(srcLogin, &inBuffer[excla + 1], srcLoginLen);
-                    srcLogin[srcLoginLen] = '\0';
-
-                    int srcHostLen = firstSPC - atSign - 1;
-                    srcHost = malloc(srcHostLen + 1);
-                    memcpy(srcHost, &inBuffer[atSign + 1], srcHostLen);
-                    srcHost[srcHostLen] = '\0';
-
-                    char* secondSPCP = strchr(&firstSPCP[1], ' ');
-                    if(secondSPCP){
-                        int ircCommandLen = (int)(secondSPCP - firstSPCP) - 1;
-                        char* ircCommand = malloc(ircCommandLen + 1);
-                        memcpy(ircCommand, &firstSPCP[1], ircCommandLen);
-                        ircCommand[ircCommandLen] = '\0';
-
-                        char* thirdSPCP = strchr(&secondSPCP[1], ' ');
-                        if(thirdSPCP){
-                            int targetLen = (int)(thirdSPCP - secondSPCP) - 1;
-                            char* target = malloc(targetLen + 1);
-                            memcpy(target, &secondSPCP[1], targetLen);
-                            target[targetLen] = '\0';
-
-                            if(strcmp(ircCommand, "PRIVMSG") == 0){
-                                //TODO: CTCP
-                                char* theMsg = strchr(&secondSPCP[1], ':');
-                                if(theMsg){
-                                    theMsg = &theMsg[1];
-
-									if(strcmp(theMsg, "!reload") == 0 && strcmp(srcLogin, "johnmh") == 0 && strcmp(srcHost, "openblox/dev/JohnMH")){
+			}
+		}else{
+			if(excla > 0 && atSign > 0 && excla < atSign){
+				int srcNickLen = excla - 1;
+				srcNick = malloc(excla);
+				memcpy(srcNick, &inBuffer[1], srcNickLen);
+				srcNick[srcNickLen] = '\0';
+				
+				int srcLoginLen = atSign - excla - 1;
+				srcLogin = malloc(srcLoginLen + 1);
+				memcpy(srcLogin, &inBuffer[excla + 1], srcLoginLen);
+				srcLogin[srcLoginLen] = '\0';
+				
+				int srcHostLen = firstSPC - atSign - 1;
+				srcHost = malloc(srcHostLen + 1);
+				memcpy(srcHost, &inBuffer[atSign + 1], srcHostLen);
+				srcHost[srcHostLen] = '\0';
+				
+				char* secondSPCP = strchr(&firstSPCP[1], ' ');
+				if(secondSPCP){
+					int ircCommandLen = (int)(secondSPCP - firstSPCP) - 1;
+					char* ircCommand = malloc(ircCommandLen + 1);
+					memcpy(ircCommand, &firstSPCP[1], ircCommandLen);
+					ircCommand[ircCommandLen] = '\0';
+				    
+					char* thirdSPCP = strchr(&secondSPCP[1], ' ');
+					if(thirdSPCP){
+						int targetLen = (int)(thirdSPCP - secondSPCP) - 1;
+						char* target = malloc(targetLen + 1);
+						memcpy(target, &secondSPCP[1], targetLen);
+						target[targetLen] = '\0';
+						
+						if(strcmp(ircCommand, "PRIVMSG") == 0){
+							//TODO: CTCP
+							char* theMsg = strchr(&secondSPCP[1], ':');
+							if(theMsg){
+								theMsg = &theMsg[1];
+								
+								//Temporary "commands"
+								if((strcmp(srcHost, "openblox/dev/JohnMH") == 0) ||
+								   (strcmp(srcHost, "bloxbot/testing") == 0)){
+									if(strcmp(theMsg, "!reload") == 0){
 										bb_reloadPlugins();
 									}
-
-                                    if(target[0] == '#'){
-                                        int ret = _bb_hook(_BB_HOOK_MSG, target, srcNick, srcLogin, srcHost, theMsg);
-                                        if(ret == BB_RET_STOP){
-                                            free(target);
-                                            free(ircCommand);
-                                            free(srcNick);
-                                            free(srcLogin);
-                                            free(srcHost);
-                                            return 0;
-                                        }
-                                    }else{
-                                        int ret = _bb_hook(_BB_HOOK_PRIVMSG, srcNick, srcLogin, srcHost, theMsg);
-                                        if(ret == BB_RET_STOP){
-                                            free(target);
-                                            free(ircCommand);
-                                            free(srcNick);
-                                            free(srcLogin);
-                                            free(srcHost);
-                                            return 0;
-                                        }
-                                    }
-                                }
-                            }
-
-                            free(target);
-                        }
-                        free(ircCommand);
-                    }
-                }
+									if(strcmp(theMsg, "!quit") == 0){
+										blox_sendDirectly("QUIT :Shutting down.\r\n");
+										return 1;
+									}
+								}
+								
+								if(target[0] == '#'){
+									int ret = _bb_hook(_BB_HOOK_MSG, target, srcNick, srcLogin, srcHost, theMsg);
+									if(ret == BB_RET_STOP){
+										free(target);
+										free(ircCommand);
+										free(srcNick);
+										free(srcLogin);
+										free(srcHost);
+										return 0;
+									}
+								}else{
+									int ret = _bb_hook(_BB_HOOK_PRIVMSG, srcNick, srcLogin, srcHost, theMsg);
+									if(ret == BB_RET_STOP){
+										free(target);
+										free(ircCommand);
+										free(srcNick);
+										free(srcLogin);
+										free(srcHost);
+										return 0;
+									}
+								}
+							}
+						}
+						
+						free(target);
+					}
+					free(ircCommand);
+				}
             }
 
             if(srcNick){
@@ -293,6 +338,8 @@ int main(int argc, char* argv[]){
     int port = 6697;
     unsigned char useTLS = 1;
 
+	_bbinPath = strdup("/public/bb-in");
+
     static struct option long_opts[] = {
         {"version", no_argument, 0, 'v'},
         {"help", no_argument, 0, 'h'},
@@ -303,6 +350,10 @@ int main(int argc, char* argv[]){
 		{"gecos", required_argument, 0, 'g'},
 		{"ns-user", required_argument, 0, 'U'},
 		{"ns-pass", required_argument, 0, 'P'},
+		{"ns-pass-env", no_argument, 0, 0},
+		{"join", required_argument, 0, 0},
+		{"ob-in-path", required_argument, 0, 0},
+		{"ob-out-port", required_argument, 0, 0},
         {0, 0, 0, 0}
     };
 
@@ -335,10 +386,19 @@ int main(int argc, char* argv[]){
 				puts("   -u, --user                  Sets the username to be used");
 				puts("   -g, --gecos                 Sets the gecos field to be used");
 				puts("");
+				puts("Authentication:");
 				puts("   -U, --ns-user               Sets the nickserv user to identify as");
 				puts("   -P, --ns-pass               Sets the nickserv password use");
-                puts("");
-                puts("   -N, --no-tls-verification   Disables TLS server verification");
+				puts("   --ns-pass-env               Sets the nickserv pass to BB_PASSWD");
+				puts("");
+				puts("Misc:");
+				puts("   --join                      Adds a channel to the join list.");
+				puts("");
+				puts("   -N, --no-tls-verification   Disables TLS server verification");
+				puts("");
+				puts("OB Module:");
+				puts("   --ob-in-path                Sets the path to use as unix socket");
+				puts("   --ob-out-port               Sets port to use for o");
                 puts("");
                 puts("   -v, --version               Prints version information and exits");
                 puts("   -h, --help                  Prints this help text and exits");
@@ -395,6 +455,65 @@ int main(int argc, char* argv[]){
 					free(ns_pass);
 				}
 				ns_pass = strdup(optarg);
+				break;
+			}
+			case 0: {
+				if(long_opts[opt_idx].flag != 0){
+					break;
+				}
+				//ns-pass-en
+				if(strcmp(long_opts[opt_idx].name, "ns-pass-env") == 0){
+					if(ns_pass){
+						free(ns_pass);
+					}
+					char* env_pass = getenv("BB_PASSWD");
+					if(!env_pass){
+						if(irc_nick){
+							free(irc_nick);
+						}
+						if(irc_user){
+							free(irc_user);
+						}
+						if(irc_gecos){
+							free(irc_gecos);
+						}
+						if(ns_user){
+							free(ns_user);
+						}
+
+						puts("The environmental variable BB_PASSWD was NULL.");
+						exit(EXIT_FAILURE);
+					}
+					ns_pass = strdup(env_pass);
+					break;
+				}
+				if(strcmp(long_opts[opt_idx].name, "join") == 0){
+					int tjoinsl = 7 + strlen(optarg);
+				    char tjoins[tjoinsl];
+					strcpy(tjoins, "JOIN ");
+					strcat(tjoins, optarg);
+					strcat(tjoins, "\r\n");
+
+					if(!join_str){
+						join_str = malloc(tjoinsl);
+						strcpy(join_str, tjoins);
+					}else{
+						join_str = realloc(join_str, join_strl + tjoinsl);
+						strcat(join_str + join_strl, tjoins);
+					}
+					
+					join_strl = join_strl + tjoinsl;
+					break;
+				}
+				if(strcmp(long_opts[opt_idx].name, "ob-in-path") == 0){
+				    free(_bbinPath);
+					_bbinPath = strdup(optarg);
+					break;
+				}
+				if(strcmp(long_opts[opt_idx].name, "ob-out-port") == 0){
+					_bboutPort = atoi(optarg);
+					break;
+				}
 				break;
 			}
             case '?': {
@@ -460,6 +579,13 @@ int main(int argc, char* argv[]){
 		ns_user = NULL;
 	}
 
+	if(ns_pass){
+		if(!ns_user){
+			ns_user = strdup(irc_nick);
+		}
+		bb_useClientCert = 0;
+	}
+
     //Init
     gnutls_global_init();
 
@@ -522,5 +648,6 @@ int main(int argc, char* argv[]){
 
     stillConnected = 0;
 
+	cleanup();
     return EXIT_SUCCESS;
 }

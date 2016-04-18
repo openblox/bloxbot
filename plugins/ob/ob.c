@@ -18,6 +18,7 @@
  */
 
 #include <plugin.h>
+#include <internal.h>
 
 #include <errno.h>
 #include <stdlib.h>
@@ -36,11 +37,8 @@
 
 #include <json.h>
 
-#define BB_PLUGIN_OB_IN_PATH "/public/bb-in"
-#define BB_PLUGIN_OB_IN_PATH_L 13
-#define BB_PLUGIN_OB_OUT_PORT 14425
-
 //Default handling for SIGPIPE is to exit. I don't know why. Sounds silly to me.
+//There's probably some historic stuff to it.
 void catch_sigpipe_do_nothing(int signum){}
 
 struct bb_plugin_ob_ud{
@@ -116,16 +114,16 @@ void* incomingThreadFnc(void* vud){
 
 	bzero(&addr, sizeof(addr));
 	addr.sun_family = AF_UNIX;
-	strncpy(addr.sun_path, BB_PLUGIN_OB_IN_PATH, BB_PLUGIN_OB_IN_PATH_L);
+	strcpy(addr.sun_path, _bbinPath);
 
-	unlink(BB_PLUGIN_OB_IN_PATH);
+	unlink(_bbinPath);
 
 	if(bind(sfd, (struct sockaddr*)&addr, sizeof(addr)) < 0){
 		puts("Failed to bind incoming socket");
 		exit(EXIT_FAILURE);
 	}
 
-	chmod(BB_PLUGIN_OB_IN_PATH, 0777);
+	chmod(_bbinPath, 0777);
 
 	if(listen(sfd, 5) == -1){
 		puts("Listen error");
@@ -233,7 +231,7 @@ void* serverThreadFnc(void* vud){
 
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_addr.s_addr = INADDR_ANY;
-	serv_addr.sin_port = htons(BB_PLUGIN_OB_OUT_PORT);
+	serv_addr.sin_port = htons(_bboutPort);
 
 	if(bind(sfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0){
 		puts("Failed to bind outgoing socket");
@@ -265,8 +263,6 @@ void* serverThreadFnc(void* vud){
 }
 
 void bloxbot_plugin_ob_init(bloxbot_Plugin* plug){
-    blox_join("#OpenBlox");
-
 	signal(SIGPIPE, catch_sigpipe_do_nothing);
 
 	struct bb_plugin_ob_ud* plug_ud = malloc(sizeof(struct bb_plugin_ob_ud));
@@ -296,9 +292,5 @@ void bloxbot_plugin_ob_init(bloxbot_Plugin* plug){
 void bloxbot_plugin_ob_deinit(){}
 
 int bloxbot_plugin_ob_on_servercode(bloxbot_Plugin* plug, char* src, int code, char* msg){
-   	if(code == 376){
-		blox_join("#OpenBlox-ops");
-		return BB_RET_STOP;
-	}
 	return BB_RET_OK;
 }
