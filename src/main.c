@@ -269,6 +269,7 @@ int handleLine(char* inBuffer, int lineLen){
 										bb_reloadPlugins();
 									}
 									if(strcmp(theMsg, "!quit") == 0){
+										stillConnected = 0;
 										blox_sendDirectly("QUIT :Shutting down.\r\n");
 										return 1;
 									}
@@ -643,7 +644,11 @@ int main(int argc, char* argv[]){
         if(handleLine(inBufferl, ret)){
 		    cleanup();
 			
-            return EXIT_FAILURE;
+			if(stillConnected){
+				return EXIT_FAILURE;
+			}else{
+				return EXIT_SUCCESS;
+			}
         }
     }
 
