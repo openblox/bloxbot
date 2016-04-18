@@ -74,6 +74,7 @@ int handleLine(char* inBuffer, int lineLen){
 	if(firstR){
 		firstR[0] = '\0';
 	}
+	lineLen = (int)(firstR - inBuffer);
 	
     //SASL EXTERNAL
     if(bb_isVerbose){
