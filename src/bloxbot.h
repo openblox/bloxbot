@@ -28,22 +28,14 @@ extern unsigned int bb_isVerbose;
 
 void _bb_init_bb();
 
-// cppcheck-suppress unusedFunction
 int blox_sendDirectlyl(char* line, int len);
-// cppcheck-suppress unusedFunction
 int blox_sendDirectly(char* line);
-// cppcheck-suppress unusedFunction
 int blox_send(char* line);
-// cppcheck-suppress unusedFunction
 int blox_sendMsg(char* target, char* msg);
-// cppcheck-suppress unusedFunction
 int blox_join(char* chan);
 //TODO: Support channels with passwords?
-// cppcheck-suppress unusedFunction
 int blox_part(char* chan);
-// cppcheck-suppress unusedFunction
 int blox_partr(char* chan, char* reason);
-// cppcheck-suppress unusedFunction
 int blox_pong(char* servName);
 
 #endif

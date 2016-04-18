@@ -31,7 +31,7 @@ cli.on("join#bloxbottest", function(nick){
 			
 			setTimeout(function(){
 				process.exit(0);
-			}, 1000);
+			}, 2500);
 		}, 1000);
 	}
 });
