@@ -41,7 +41,7 @@ cli.on("quit", function(nick, reason, channels, message){
 });
 
 setTimeout(function(){
-	cli.say("#bloxbottest", "bloxboot failed to respond in 5 seconds. Forcing end.");
+	cli.say("#bloxbottest", "bloxboot failed to respond in 25 seconds. Forcing end.");
 
 	setTimeout(function(){
 		cli.disconnect("Test over");
@@ -51,4 +51,4 @@ setTimeout(function(){
 			process.exit(0);
 		}, 2500);
 	}, 1000);
-}, 5000);
+}, 25000);
