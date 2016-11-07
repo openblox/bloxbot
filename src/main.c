@@ -416,6 +416,8 @@ int main(int argc, char* argv[]){
     bbm_port = 6697;
     bbm_useTLS = 1;
 
+	unsigned char bb_oneshot = 0;
+
 	_bbinPath = strdup("/public/bb-in");
 
     static struct option long_opts[] = {
@@ -423,6 +425,7 @@ int main(int argc, char* argv[]){
         {"help", no_argument, 0, 'h'},
         {"no-tls-verification", no_argument, 0, 'N'},
         {"verbose", no_argument, 0, 'V'},
+		{"oneshot", no_argument, 0, 'O'},
 		{"user", required_argument, 0, 'u'},
 		{"nick", required_argument, 0, 'n'},
 		{"gecos", required_argument, 0, 'g'},
@@ -439,7 +442,7 @@ int main(int argc, char* argv[]){
 
     int c;
     while(1){
-        c = getopt_long(argc, argv, "vhNVu:n:g:U:P:", long_opts, &opt_idx);
+        c = getopt_long(argc, argv, "vhNVOu:n:g:U:P:", long_opts, &opt_idx);
 
         if(c == -1){
             break;
@@ -471,6 +474,7 @@ int main(int argc, char* argv[]){
 				puts("");
 				puts("Misc:");
 				puts("   --join                      Adds a channel to the join list.");
+				puts("   -O, --oneshot               Only fork once.");
 				puts("");
 				puts("   -N, --no-tls-verification   Disables TLS server verification");
 				puts("");
@@ -500,6 +504,10 @@ int main(int argc, char* argv[]){
                 bb_isVerbose = !bb_isVerbose;
                 break;
             }
+			case 'O': {
+				bb_oneshot = !bb_oneshot;
+				break;
+			}
 			case 'n': {
 				if(irc_nick){
 					free(irc_nick);
@@ -682,6 +690,11 @@ int main(int argc, char* argv[]){
 
 				if(wpid == cpid){
 					printf("Child died. Exit code: %d\n", WEXITSTATUS(status));
+					if(bb_oneshot){
+						puts("Shutting down.");
+						exit(EXIT_SUCCESS);
+						return;
+					}
 					puts("The cycle continues!");
 					sleep(1);
 					break;
