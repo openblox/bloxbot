@@ -574,7 +574,7 @@ int main(int argc, char* argv[]){
 					break;
 				}
 				if(strcmp(long_opts[opt_idx].name, "join") == 0){
-					int tjoinsl = 7 + strlen(optarg);
+					int tjoinsl = 8 + strlen(optarg);
 				    char tjoins[tjoinsl];
 					strcpy(tjoins, "JOIN ");
 					strcat(tjoins, optarg);
