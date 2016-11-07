@@ -9,6 +9,7 @@ var cli = new irc.Client("irc.openblox.org", testName, {
 	autoRejoin: false,
 	autoConnect: true,
 	channels: ["#bloxbottest"],
+	selfSigned: true,
 	secure: true
 });
 
