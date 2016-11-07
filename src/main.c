@@ -33,6 +33,8 @@
 
 #include <glib.h>
 
+#include <sys/wait.h>
+
 #include <gnutls/gnutls.h>
 
 static unsigned char stillConnected = 1;
@@ -57,6 +59,10 @@ int join_strl = 0;
 
 unsigned char doneReg = 0;
 unsigned char capStage = 0;
+
+char* bbm_server;
+int bbm_port;
+unsigned char bbm_useTLS;
 
 pthread_t queueThread;
 
@@ -334,11 +340,81 @@ void cleanup(){
 	}
 }
 
+void main_ircbot(){
+	_bb_init_bb();
+    _bb_init_internal();
+    _bb_plugin_init();
+
+    bb_loadPlugin("ob");
+
+    //Actually do the connection
+    bloxbot_open_fnc connFunc = NULL;
+
+    if(bbm_useTLS){
+        connFunc = bloxbot_conn_tls;
+    }else{
+        connFunc = bloxbot_conn_plain;
+    }
+
+    irc_conn = connFunc(bbm_server, bbm_port);
+
+    if(!irc_conn){
+	    cleanup();
+		
+        _exit(EXIT_FAILURE);
+    }
+
+    char inBufferl[MAX_BUFFER_LEN+1];
+
+	int ret = pthread_create(&queueThread, NULL, queueThreadFnc, NULL);
+	if(ret){
+	    cleanup();
+		
+		puts("Error: Failed to create queue thread");
+		_exit(EXIT_FAILURE);
+	}
+
+    ret = 1;
+    while(ret != -1 && stillConnected){
+        //bzero(inBufferl, MAX_BUFFER_LEN);
+        ret = irc_conn->read(irc_conn, inBufferl, MAX_BUFFER_LEN);
+
+        if(ret < 0){
+		    cleanup();
+			
+            _exit(EXIT_FAILURE);
+            break;//Obviously this isn't necessary
+        }
+
+        if(ret == 0){
+            stillConnected = 0;
+            break;
+        }
+
+        if(handleLine(inBufferl, ret)){
+		    cleanup();
+			
+			if(stillConnected){
+			    _exit(EXIT_FAILURE);
+				return;
+			}else{
+			    _exit(EXIT_SUCCESS);
+				return;
+			}
+        }
+    }
+
+    stillConnected = 0;
+
+	cleanup();
+    _exit(EXIT_SUCCESS);
+}
+
 int main(int argc, char* argv[]){
     //TODO: Configuration
-    char* server = strdup("irc.openblox.org");
-    int port = 6697;
-    unsigned char useTLS = 1;
+    bbm_server = strdup("irc.openblox.org");
+    bbm_port = 6697;
+    bbm_useTLS = 1;
 
 	_bbinPath = strdup("/public/bb-in");
 
@@ -591,69 +667,27 @@ int main(int argc, char* argv[]){
     //Init
     gnutls_global_init();
 
-    _bb_init_bb();
-    _bb_init_internal();
-    _bb_plugin_init();
+	while(1){
+		pid_t cpid = fork();
 
-    bb_loadPlugin("ob");
+		if(cpid == 0){
+			main_ircbot();
 
-    //Actually do the connection
-    bloxbot_open_fnc connFunc = NULL;
+			//Should theoretically never get here, but to be safe..
+			_exit(EXIT_SUCCESS);
+		}else{
+			int status = 0;
+			while(1){
+				pid_t wpid = wait(&status);
 
-    if(useTLS){
-        connFunc = bloxbot_conn_tls;
-    }else{
-        connFunc = bloxbot_conn_plain;
-    }
-
-    irc_conn = connFunc(server, port);
-
-    if(!irc_conn){
-	    cleanup();
-		
-        return EXIT_FAILURE;
-    }
-
-    char inBufferl[MAX_BUFFER_LEN+1];
-
-	int ret = pthread_create(&queueThread, NULL, queueThreadFnc, NULL);
-	if(ret){
-	    cleanup();
-		
-		puts("Error: Failed to create queue thread");
-		exit(EXIT_FAILURE);
-	}
-
-    ret = 1;
-    while(ret != -1 && stillConnected){
-        //bzero(inBufferl, MAX_BUFFER_LEN);
-        ret = irc_conn->read(irc_conn, inBufferl, MAX_BUFFER_LEN);
-
-        if(ret < 0){
-		    cleanup();
-			
-            exit(EXIT_FAILURE);
-            break;//Obviously this isn't necessary
-        }
-
-        if(ret == 0){
-            stillConnected = 0;
-            break;
-        }
-
-        if(handleLine(inBufferl, ret)){
-		    cleanup();
-			
-			if(stillConnected){
-				return EXIT_FAILURE;
-			}else{
-				return EXIT_SUCCESS;
+				if(wpid == cpid){
+					printf("Child died. Exit code: %d\n", WEXITSTATUS(status));
+					puts("The cycle continues!");
+					sleep(1);
+					break;
+				}
 			}
-        }
-    }
-
-    stillConnected = 0;
-
-	cleanup();
-    return EXIT_SUCCESS;
+		}
+	}
+	return EXIT_SUCCESS;
 }
