@@ -1,4 +1,5 @@
 var irc = require("irc");
+var spawn = require("child_process").spawn;
 
 var testName = "bloxtest";
 
@@ -17,22 +18,37 @@ cli.on("motd", function(){
 	cli.say("NickServ", "IDENTIFY bloxboot " + process.env["BB_PASSWD"]);
 });
 
-var didSayOnce = false;
+var bloxbootQuit = false;
 
 cli.on("join#bloxbottest", function(nick){
-	if(nick === "bloxboot" && !didSayOnce){
-		didSayOnce = true;
-		
-		//TODO: Real testing.
-		
-		cli.say("#bloxbottest", "!quit");
-		
+	if(nick === "bloxboot"){
 		setTimeout(function(){
-			cli.disconnect("Test over");
-			
-			setTimeout(function(){
-				process.exit(0);
-			}, 2500);
+			cli.say("#bloxbottest", "!quit");
 		}, 1000);
 	}
 });
+
+cli.on("quit", function(nick, reason, channels, message){
+	if(nick === "bloxboot"){
+		cli.disconnect("Test over");
+
+		bloxbootQuit = true;
+		
+		setTimeout(function(){
+			process.exit(0);
+		}, 2500);
+	}
+});
+
+setTimeout(function(){
+	cli.say("#bloxbottest", "bloxboot failed to respond in 5 seconds. Forcing end.");
+
+	setTimeout(function(){
+		cli.disconnect("Test over");
+
+		setTimeout(function(){
+			spawn("pkill", ["-9", "valgrind*"]);
+			process.exit(0);
+		}, 2500);
+	}, 1000);
+}, 5000);
