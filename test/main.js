@@ -1,5 +1,4 @@
-var irc = require("irc");
-var spawn = require("child_process").spawn;
+const irc = require("irc"), fs = require("fs"), spawn = require("child_process").spawn;
 
 var testName = "bloxtest";
 
@@ -47,7 +46,7 @@ setTimeout(function(){
 		cli.disconnect("Test over");
 
 		setTimeout(function(){
-			spawn("pkill", ["-9", "valgrind*"]);
+			spawn("kill", ["-9", fs.readFileSync("bloxtest.pid")]);
 			process.exit(0);
 		}, 2500);
 	}, 1000);
