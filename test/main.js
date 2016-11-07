@@ -35,7 +35,7 @@ cli.on("quit", function(nick, reason, channels, message){
 		
 		setTimeout(function(){
 			process.exit(0);
-		}, 2500);
+		}, 5000);
 	}
 });
 
