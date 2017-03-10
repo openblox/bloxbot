@@ -101,7 +101,7 @@ bloxbot_Plugin* bb_loadPlugin(char* name){
 	bloxbot_plugin_init_fnc initFnc = NULL;
 
 	strcpy(plug_symn, "init");
-	initFnc = (bloxbot_plugin_init_fnc)dlsym(handle, plug_sym_name);
+	initFnc = (bloxbot_plugin_init_fnc)dlsym(handle, &plug_sym_name[0]);
 	if(!initFnc){
 		fprintf(stderr, "Error loading plugin '%s': Could not find initialization function symbol\n", name);
 
@@ -112,7 +112,7 @@ bloxbot_Plugin* bb_loadPlugin(char* name){
 	bloxbot_plugin_deinit_fnc deinitFnc = NULL;
 
 	strcpy(plug_symn, "deinit");
-	deinitFnc = (bloxbot_plugin_deinit_fnc)dlsym(handle, plug_sym_name);
+	deinitFnc = (bloxbot_plugin_deinit_fnc)dlsym(handle, &plug_sym_name[0]);
 	if(!deinitFnc){
 		fprintf(stderr, "Error loading plugin '%s': Could not find deinitialization function symbol\n", name);
 
