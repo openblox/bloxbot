@@ -134,13 +134,13 @@ bloxbot_Plugin* bb_loadPlugin(char* name){
 	plug->deinit = deinitFnc;
 
 	strcpy(plug_symn, "on_msg");
-	plug->on_msg = dlsym(handle, plug_sym_name);
+	plug->on_msg = dlsym(handle, &plug_sym_name[0]);
 
 	strcpy(plug_symn, "on_privmsg");
-	plug->on_privmsg = dlsym(handle, plug_sym_name);
+	plug->on_privmsg = dlsym(handle, &plug_sym_name[0]);
 
 	strcpy(plug_symn, "on_servercode");
-	plug->on_servercode = dlsym(handle, plug_sym_name);
+	plug->on_servercode = dlsym(handle, &plug_sym_name[0]);
 
 	g_hash_table_insert(pluginTable, strdup(name), plug);
 
