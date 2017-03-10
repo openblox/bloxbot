@@ -101,7 +101,7 @@ bloxbot_Plugin* bb_loadPlugin(char* name){
 	bloxbot_plugin_init_fnc initFnc = NULL;
 
 	strcpy(plug_symn, "init");
-	initFnc = (bloxbot_plugin_init_fnc)dlsym(handle, &plug_sym_name[0]);
+	initFnc = (bloxbot_plugin_init_fnc)dlsym(handle, plug_sym_name);
 	if(!initFnc){
 		fprintf(stderr, "Error loading plugin '%s': Could not find initialization function symbol\n", name);
 
@@ -112,7 +112,7 @@ bloxbot_Plugin* bb_loadPlugin(char* name){
 	bloxbot_plugin_deinit_fnc deinitFnc = NULL;
 
 	strcpy(plug_symn, "deinit");
-	deinitFnc = (bloxbot_plugin_deinit_fnc)dlsym(handle, &plug_sym_name[0]);
+	deinitFnc = (bloxbot_plugin_deinit_fnc)dlsym(handle, plug_sym_name);
 	if(!deinitFnc){
 		fprintf(stderr, "Error loading plugin '%s': Could not find deinitialization function symbol\n", name);
 
@@ -133,14 +133,14 @@ bloxbot_Plugin* bb_loadPlugin(char* name){
 	plug->init = initFnc;
 	plug->deinit = deinitFnc;
 
-	strcpy(plug_symn, "on_msg");
-	plug->on_msg = dlsym(handle, &plug_sym_name[0]);
+	strcpy(&plug_symn[0], "on_msg");
+	plug->on_msg = dlsym(handle, plug_sym_name);
 
 	strcpy(plug_symn, "on_privmsg");
-	plug->on_privmsg = dlsym(handle, &plug_sym_name[0]);
+	plug->on_privmsg = dlsym(handle, plug_sym_name);
 
 	strcpy(plug_symn, "on_servercode");
-	plug->on_servercode = dlsym(handle, &plug_sym_name[0]);
+	plug->on_servercode = dlsym(handle, plug_sym_name);
 
 	g_hash_table_insert(pluginTable, strdup(name), plug);
 
