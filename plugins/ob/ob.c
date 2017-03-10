@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 John M. Harris, Jr. <johnmh@openblox.org>
+ * Copyright (C) 2016-2017 John M. Harris, Jr. <johnmh@openblox.org>
  *
  * This file is part of bloxbot.
  *
