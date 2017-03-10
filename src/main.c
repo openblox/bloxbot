@@ -449,9 +449,8 @@ int main(int argc, char* argv[]){
 
     int opt_idx = 0;
 
-    int c;
     while(1){
-        c = getopt_long(argc, argv, "vhNVOu:n:g:U:P:", long_opts, &opt_idx);
+        int c = getopt_long(argc, argv, "vhNVOu:n:g:U:P:", long_opts, &opt_idx);
 
         if(c == -1){
             break;
