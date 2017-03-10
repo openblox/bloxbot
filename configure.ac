@@ -8,6 +8,7 @@ AC_PROG_CC
 
 AC_CONFIG_HEADERS(src/config.h)
 AC_CONFIG_FILES([Makefile src/Makefile plugins/Makefile
-plugins/ob/Makefile])
+plugins/ob/Makefile
+plugins/cmd/Makefile])
 
 AC_OUTPUT
