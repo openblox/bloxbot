@@ -584,7 +584,12 @@ int main(int argc, char* argv[]){
 						join_str = malloc(tjoinsl);
 						strcpy(join_str, tjoins);
 					}else{
-						join_str = realloc(join_str, join_strl + tjoinsl);
+						char* tmp_join_str = realloc(join_str, join_strl + tjoinsl);
+						if(!tmp_join_str){
+							free(join_str); 
+							exit(EXIT_FAILURE);
+							return EXIT_FAILURE;
+						}
 						strcat(join_str + join_strl, tjoins);
 					}
 					
