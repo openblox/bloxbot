@@ -692,8 +692,7 @@ int main(int argc, char* argv[]){
 					printf("Child died. Exit code: %d\n", WEXITSTATUS(status));
 					if(bb_oneshot){
 						puts("Shutting down.");
-						exit(EXIT_SUCCESS);
-						return;
+						return EXIT_SUCCESS;
 					}
 					puts("The cycle continues!");
 					sleep(1);
