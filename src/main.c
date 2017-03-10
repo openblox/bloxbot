@@ -41,6 +41,7 @@ static unsigned char stillConnected = 1;
 unsigned char bb_verifyTLS = 1;
 unsigned int bb_isVerbose = 1;
 unsigned char bb_useClientCert = 1;
+unsigned char bb_noAuth = 0;
 bloxbot_Conn* irc_conn = NULL;
 long int irc_last_msg = 0;
 
@@ -150,16 +151,16 @@ int handleLine(char* inBuffer, int lineLen){
 
         blox_sendDirectlyl(userLine, userLineLen);
 
+		if(bb_noAuth){
+			capStage = 3;
+		}
+
         doneReg = 1;
     }
 
     if(strncmp(inBuffer, "PING :", 6) == 0){
         blox_pong(&inBuffer[6]);
     }
-
-    char* srcNick = NULL;
-    char* srcLogin = NULL;
-    char* srcHost = NULL;
 
     char* exclaP = strchr(inBuffer, '!');
     char* atSignP = strchr(inBuffer, '@');
@@ -177,6 +178,10 @@ int handleLine(char* inBuffer, int lineLen){
         firstSPC = 0;
     }
     if(inBuffer[0] == ':'){
+		char* srcNick = NULL;
+		char* srcLogin = NULL;
+		char* srcHost = NULL;
+		
         if(excla == 0 || firstSPC < excla){
             int srcNickLen = firstSPC - 1;
             srcNick = malloc(firstSPC);
@@ -434,6 +439,7 @@ int main(int argc, char* argv[]){
 		{"ns-user", required_argument, 0, 'U'},
 		{"ns-pass", required_argument, 0, 'P'},
 		{"ns-pass-env", no_argument, 0, 0},
+		{"no-auth", no_argument, 0, 0},
 		{"join", required_argument, 0, 0},
 		{"ob-in-path", required_argument, 0, 0},
 		{"ob-out-port", required_argument, 0, 0},
@@ -473,6 +479,7 @@ int main(int argc, char* argv[]){
 				puts("   -U, --ns-user               Sets the nickserv user to identify as");
 				puts("   -P, --ns-pass               Sets the nickserv password use");
 				puts("   --ns-pass-env               Sets the nickserv pass to BB_PASSWD");
+				puts("   --no-auth                   Doesn't authenticate");
 				puts("");
 				puts("Misc:");
 				puts("   --join                      Adds a channel to the join list.");
@@ -606,6 +613,10 @@ int main(int argc, char* argv[]){
 				}
 				if(strcmp(long_opts[opt_idx].name, "ob-out-port") == 0){
 					_bboutPort = atoi(optarg);
+					break;
+				}
+				if(strcmp(long_opts[opt_idx].name, "no-auth") == 0){
+				    bb_noAuth = !bb_noAuth;
 					break;
 				}
 				break;
