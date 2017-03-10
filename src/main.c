@@ -179,8 +179,6 @@ int handleLine(char* inBuffer, int lineLen){
     }
     if(inBuffer[0] == ':'){
 		char* srcNick = NULL;
-		char* srcLogin = NULL;
-		char* srcHost = NULL;
 		
         if(excla == 0 || firstSPC < excla){
             int srcNickLen = firstSPC - 1;
@@ -238,6 +236,9 @@ int handleLine(char* inBuffer, int lineLen){
                 }
 			}
 		}else{
+			char* srcLogin = NULL;
+			char* srcHost = NULL;
+			
 			if(excla > 0 && atSign > 0 && excla < atSign){
 				int srcNickLen = excla - 1;
 				srcNick = malloc(excla);
