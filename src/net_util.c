@@ -52,8 +52,6 @@ int net_util_connect(char* addr, int port){
 
 	char ipstr[INET_ADDRSTRLEN];
 
-	int sockfd;
-
 	for(p = servinfo; p != NULL; p = p->ai_next){
 		struct in_addr* addr;
 		if(p->ai_family == AF_INET){
@@ -66,7 +64,7 @@ int net_util_connect(char* addr, int port){
 
 		inet_ntop(p->ai_family, addr, ipstr, sizeof(ipstr));
 
-		sockfd = socket(p->ai_family, SOCK_STREAM, 0);
+		int sockfd = socket(p->ai_family, SOCK_STREAM, 0);
 		if(sockfd != -1){
 			if(connect(sockfd, p->ai_addr, p->ai_addrlen) == 0){
 				freeaddrinfo(servinfo);
