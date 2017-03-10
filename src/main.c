@@ -187,6 +187,7 @@ int handleLine(char* inBuffer, int lineLen){
             if(strlen(strCode_) > 3){
                 char* strCode = malloc(4);
                 if(!strCode){
+					free(srcNick);
                     return 1;
                 }
                 memcpy(strCode, &strCode_[1], 3);
