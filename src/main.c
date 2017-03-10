@@ -277,6 +277,7 @@ int handleLine(char* inBuffer, int lineLen){
 									if(strcmp(theMsg, "!quit") == 0){
 										stillConnected = 0;
 										blox_sendDirectly("QUIT :Shutting down.\r\n");
+										free(ircCommand);
 										return 1;
 									}
 								}
