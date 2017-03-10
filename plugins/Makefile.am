@@ -1,1 +1,1 @@
-SUBDIRS = ob
+SUBDIRS = ob cmd
