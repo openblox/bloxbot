@@ -592,6 +592,7 @@ int main(int argc, char* argv[]){
 							exit(EXIT_FAILURE);
 							return EXIT_FAILURE;
 						}
+						join_str = tmp_join_str;
 						strcat(join_str + join_strl, tjoins);
 					}
 					
