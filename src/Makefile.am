@@ -3,6 +3,7 @@ bloxbot_SOURCES = main.c \
 	bloxbot.c \
 	internal.c \
 	plugin.c \
+	conf.c \
 	net_util.c \
 	conn_plain.c \
 	conn_tls.c

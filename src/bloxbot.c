@@ -149,3 +149,22 @@ int blox_pong(char* servName){
 
     return blox_sendDirectlyl(line, lenWhole);//PONGs are considered important, so they're sent directly.. DO NOT send too many PONGs too quickly!
 }
+
+unsigned char blox_isAdmin(char* srcNick, char* srcLogin, char* srcHost){
+	return ((strcmp(srcHost, "openblox/dev/JohnMH") == 0) ||
+			(strcmp(srcHost, "bloxbot/testing") == 0) ||
+			((strcmp(srcHost, "developer.openblox.org") == 0) && (strcmp(srcLogin, "~johnmh") == 0)));
+}
+
+void blox_msgToUser(char* target, char* srcNick, unsigned char isPublic, char* msg){
+	if(target && isPublic){
+		char msgBuf[strlen(srcNick) + 2 + strlen(msg)];
+		strcpy(msgBuf, srcNick);
+		strcat(msgBuf, ": ");
+		strcat(msgBuf, msg);
+		
+		blox_sendMsg(target, msgBuf);
+	}else{
+		blox_sendMsg(srcNick, msg);
+	}
+}

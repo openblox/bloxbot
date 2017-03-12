@@ -293,5 +293,8 @@ void bloxbot_plugin_ob_init(bloxbot_Plugin* plug){
 void bloxbot_plugin_ob_deinit(){}
 
 int bloxbot_plugin_ob_on_servercode(bloxbot_Plugin* plug, char* src, int code, char* msg){
+	if(code == 376){
+		//TODO: Join channels
+	}
 	return BB_RET_OK;
 }

@@ -46,7 +46,6 @@ void _bb_run_queue(){
     long int cT = _bb_curtime();
     if((cT - irc_last_msg) > BB_MSG_DEBUF){
         if(curQueue){
-            puts("Running item");
             struct bb_QueueItem* oldItem = curQueue;
             curQueue = oldItem->next;
 

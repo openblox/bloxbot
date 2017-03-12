@@ -37,5 +37,7 @@ int blox_join(char* chan);
 int blox_part(char* chan);
 int blox_partr(char* chan, char* reason);
 int blox_pong(char* servName);
+unsigned char blox_isAdmin(char* srcNick, char* srcLogin, char* srcHost);
+void blox_msgToUser(char* target, char* srcNick, unsigned char isPublic, char* msg);
 
 #endif

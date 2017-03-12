@@ -22,6 +22,7 @@
 #include "internal.h"
 
 #include "plugin.h"
+#include "conf.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -41,9 +42,10 @@ static unsigned char stillConnected = 1;
 unsigned char bb_verifyTLS = 1;
 unsigned int bb_isVerbose = 1;
 unsigned char bb_useClientCert = 1;
-unsigned char bb_noAuth = 0;
 bloxbot_Conn* irc_conn = NULL;
 long int irc_last_msg = 0;
+
+char* bb_confFile = NULL;
 
 char* _bbinPath = NULL;
 int _bboutPort = 14425;
@@ -151,10 +153,6 @@ int handleLine(char* inBuffer, int lineLen){
 
         blox_sendDirectlyl(userLine, userLineLen);
 
-		if(bb_noAuth){
-			capStage = 3;
-		}
-
         doneReg = 1;
     }
 
@@ -215,7 +213,12 @@ int handleLine(char* inBuffer, int lineLen){
 						}
 						
 						if(join_str){
-							blox_sendDirectly(join_str);
+							char joinLine[7 + join_strl];
+							strcpy(joinLine, "JOIN ");
+							strcat(joinLine, join_str);
+							strcat(joinLine, "\r\n");
+							
+							blox_sendDirectly(joinLine);
 							
 							free(join_str);
 							join_str = NULL;
@@ -274,18 +277,22 @@ int handleLine(char* inBuffer, int lineLen){
 							char* theMsg = strchr(&secondSPCP[1], ':');
 							if(theMsg){
 								theMsg = &theMsg[1];
-								
-								//Temporary "commands"
-								if((strcmp(srcHost, "openblox/dev/JohnMH") == 0) ||
-								   (strcmp(srcHost, "bloxbot/testing") == 0)){
-									if(strcmp(theMsg, "!reload") == 0){
-										bb_reloadPlugins();
+
+								if(theMsg[0] == '!'){
+									char* target_tmp = NULL;
+									if(target[0] == '#'){
+										target_tmp = target;
 									}
-									if(strcmp(theMsg, "!quit") == 0){
-										stillConnected = 0;
-										blox_sendDirectly("QUIT :Shutting down.\r\n");
+									
+								    int r = bb_processCommand(target_tmp, srcNick, srcLogin, srcHost, theMsg);
+									if(r != 0){
+										if(r == 6){//Magic numbers, don't you love them?
+											stillConnected = 0;
+											blox_sendDirectly("QUIT :Shutting down.\r\n");
+											r = 1;
+										}
 										free(ircCommand);
-										return 1;
+										return r;
 									}
 								}
 								
@@ -353,7 +360,18 @@ void main_ircbot(){
     _bb_init_internal();
     _bb_plugin_init();
 
+	unsigned char rr = bb_reloadConfig(NULL);
+	if(rr != 0){
+		puts("Failed to read configuration file..");
+		if(rr == 2){
+		    cleanup();
+			_exit(EXIT_FAILURE);
+			return;
+		}
+	}
+	
     bb_loadPlugin("ob");
+	bb_loadPlugin("cmd");
 
     //Actually do the connection
     bloxbot_open_fnc connFunc = NULL;
@@ -418,11 +436,34 @@ void main_ircbot(){
     _exit(EXIT_SUCCESS);
 }
 
+unsigned char _bb_addJoinCmd(char* chan, int len){
+	if(!join_str){
+		join_str = strndup(chan, len);
+		join_strl = len;
+	}else{
+		char* tjoins = malloc(len + 1);
+		strcpy(tjoins, ",");
+		strcat(tjoins, chan);
+		
+		char* tmp_join_str = realloc(join_str, join_strl + len + 1);
+		if(!tmp_join_str){
+			free(join_str);
+			exit(EXIT_FAILURE);
+			return EXIT_FAILURE;
+		}
+		join_str = tmp_join_str;
+		strcat(join_str, tjoins);
+		join_strl += len + 1;
+	}
+
+	return 0;
+}
+
 int main(int argc, char* argv[]){
-    //TODO: Configuration
     bbm_server = strdup("irc.openblox.org");
     bbm_port = 6697;
     bbm_useTLS = 1;
+	bb_confFile = strdup("bloxbot.conf");
 
 	unsigned char bb_oneshot = 0;
 
@@ -432,6 +473,8 @@ int main(int argc, char* argv[]){
         {"version", no_argument, 0, 'v'},
         {"help", no_argument, 0, 'h'},
         {"no-tls-verification", no_argument, 0, 'N'},
+		{"host", required_argument, 0, 0},
+		{"port", required_argument, 0, 0},
         {"verbose", no_argument, 0, 'V'},
 		{"oneshot", no_argument, 0, 'O'},
 		{"user", required_argument, 0, 'u'},
@@ -440,10 +483,10 @@ int main(int argc, char* argv[]){
 		{"ns-user", required_argument, 0, 'U'},
 		{"ns-pass", required_argument, 0, 'P'},
 		{"ns-pass-env", no_argument, 0, 0},
-		{"no-auth", no_argument, 0, 0},
 		{"join", required_argument, 0, 0},
 		{"ob-in-path", required_argument, 0, 0},
 		{"ob-out-port", required_argument, 0, 0},
+		{"config", required_argument, 0, 0},
         {0, 0, 0, 0}
     };
 
@@ -459,7 +502,7 @@ int main(int argc, char* argv[]){
         switch(c){
             case 'v': {
                 puts(PACKAGE_STRING);
-                puts("Copyright (C) 2016 John M. Harris, Jr.");
+                puts("Copyright (C) 2017 John M. Harris, Jr.");
                 puts("This is free software. It is licensed for use, modification and");
                 puts("redistribution under the terms of the GNU General Public License,");
                 puts("version 3 or later <https://gnu.org/licenses/gpl.html>");
@@ -479,13 +522,16 @@ int main(int argc, char* argv[]){
 				puts("   -U, --ns-user               Sets the nickserv user to identify as");
 				puts("   -P, --ns-pass               Sets the nickserv password use");
 				puts("   --ns-pass-env               Sets the nickserv pass to BB_PASSWD");
-				puts("   --no-auth                   Doesn't authenticate");
+				puts("");
+				puts("Connection:");
+				puts("   --host                      Sets the host to connect to");
+				puts("   --port                      Sets the port to connect to");
+				puts("   -N, --no-tls-verification   Disables TLS server verification");
 				puts("");
 				puts("Misc:");
+				puts("   --config                    Uses a specified file instead of bloxbot.conf");
 				puts("   --join                      Adds a channel to the join list.");
 				puts("   -O, --oneshot               Only fork once.");
-				puts("");
-				puts("   -N, --no-tls-verification   Disables TLS server verification");
 				puts("");
 				puts("OB Module:");
 				puts("   --ob-in-path                Sets the path to use as unix socket");
@@ -583,27 +629,24 @@ int main(int argc, char* argv[]){
 					break;
 				}
 				if(strcmp(long_opts[opt_idx].name, "join") == 0){
-					int tjoinsl = 8 + strlen(optarg);
-				    char tjoins[tjoinsl];
-					strcpy(tjoins, "JOIN ");
-					strcat(tjoins, optarg);
-					strcat(tjoins, "\r\n");
-
-					if(!join_str){
-						join_str = malloc(tjoinsl);
-						strcpy(join_str, tjoins);
-					}else{
-						char* tmp_join_str = realloc(join_str, join_strl + tjoinsl);
-						if(!tmp_join_str){
-							free(join_str); 
-							exit(EXIT_FAILURE);
-							return EXIT_FAILURE;
-						}
-						join_str = tmp_join_str;
-						strcat(join_str + join_strl, tjoins);
+					unsigned char r = _bb_addJoinCmd(optarg, strlen(optarg));
+					if(r != 0){
+						return r;
 					}
-					
-					join_strl = join_strl + tjoinsl;
+					break;
+				}
+				if(strcmp(long_opts[opt_idx].name, "host") == 0){
+					free(bbm_server);
+					bbm_server = strdup(optarg);
+					break;
+				}
+				if(strcmp(long_opts[opt_idx].name, "port") == 0){
+					bbm_port = atoi(optarg);
+					break;
+				}
+				if(strcmp(long_opts[opt_idx].name, "config") == 0){
+				    free(bb_confFile);
+				    bb_confFile = strdup(optarg);
 					break;
 				}
 				if(strcmp(long_opts[opt_idx].name, "ob-in-path") == 0){
@@ -613,10 +656,6 @@ int main(int argc, char* argv[]){
 				}
 				if(strcmp(long_opts[opt_idx].name, "ob-out-port") == 0){
 					_bboutPort = atoi(optarg);
-					break;
-				}
-				if(strcmp(long_opts[opt_idx].name, "no-auth") == 0){
-				    bb_noAuth = !bb_noAuth;
 					break;
 				}
 				break;
@@ -661,7 +700,130 @@ int main(int argc, char* argv[]){
         }
     }
 
-    //TODO: Read config from configuration file
+	unsigned char r = bb_loadConfig(bb_confFile);
+	if(r != 0){
+		puts("Failed to read configuration file.");
+		if(r == 2){
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	{
+		bloxbot_ConfigEntry* ent = bb_getConfigEntry("user");
+		if(ent){
+			if(ent->type == BLOXBOT_CONF_ENT_TYPE_STR){
+				if(ent->data.str.len > 0){
+					irc_user = strdup(ent->data.str.str);
+				}
+			}
+			bb_releaseConfigEntry(ent);
+			ent = NULL;
+		}
+
+		ent = bb_getConfigEntry("nick");
+		if(ent){
+			if(ent->type == BLOXBOT_CONF_ENT_TYPE_STR){
+				if(ent->data.str.len > 0){
+					irc_nick = strdup(ent->data.str.str);
+				}
+			}
+			bb_releaseConfigEntry(ent);
+			ent = NULL;
+		}
+
+		ent = bb_getConfigEntry("gecos");
+		if(ent){
+			if(ent->type == BLOXBOT_CONF_ENT_TYPE_STR){
+				if(ent->data.str.len > 0){
+					irc_gecos = strdup(ent->data.str.str);
+				}
+			}
+			bb_releaseConfigEntry(ent);
+			ent = NULL;
+		}
+
+		ent = bb_getConfigEntry("ns-user");
+		if(ent){
+			if(ent->type == BLOXBOT_CONF_ENT_TYPE_STR){
+				if(ent->data.str.len > 0){
+					ns_user = strdup(ent->data.str.str);
+				}
+			}
+			bb_releaseConfigEntry(ent);
+			ent = NULL;
+		}
+
+		ent = bb_getConfigEntry("ns-pass");
+		if(ent){
+			if(ent->type == BLOXBOT_CONF_ENT_TYPE_STR){
+				if(ent->data.str.len > 0){
+				    ns_pass = strdup(ent->data.str.str);
+				}
+			}
+			bb_releaseConfigEntry(ent);
+			ent = NULL;
+		}
+
+		ent = bb_getConfigEntry("channels");
+		if(ent){
+			if(ent->type == BLOXBOT_CONF_ENT_TYPE_ARRAY){
+				int i;
+				for(i = 0; i < ent->data.array.len; i++){
+					bloxbot_ConfigEntry* arrayEnt = ent->data.array.array[i];
+					if(arrayEnt){
+						if(arrayEnt->type == BLOXBOT_CONF_ENT_TYPE_STR){							
+							r = 0;
+							r = _bb_addJoinCmd(arrayEnt->data.str.str, arrayEnt->data.str.len);
+							if(r != 0){
+								return r;
+							}
+						}
+					}
+				}
+			}
+			bb_releaseConfigEntry(ent);
+			ent = NULL;
+		}
+
+		ent = bb_getConfigEntry("verifyTLS");
+		if(ent){
+			if(ent->type == BLOXBOT_CONF_ENT_TYPE_INT){
+				bb_verifyTLS = ent->data.integer;
+			}
+			bb_releaseConfigEntry(ent);
+			ent = NULL;
+		}
+
+		ent = bb_getConfigEntry("oneshot");
+		if(ent){
+			if(ent->type == BLOXBOT_CONF_ENT_TYPE_INT){
+			    bb_oneshot = ent->data.integer;
+			}
+			bb_releaseConfigEntry(ent);
+			ent = NULL;
+		}
+
+		ent = bb_getConfigEntry("port");
+		if(ent){
+			if(ent->type == BLOXBOT_CONF_ENT_TYPE_INT){
+			    bbm_port = ent->data.integer;
+			}
+			bb_releaseConfigEntry(ent);
+			ent = NULL;
+		}
+
+		ent = bb_getConfigEntry("host");
+		if(ent){
+			if(ent->type == BLOXBOT_CONF_ENT_TYPE_STR){
+				if(ent->data.str.len > 0){
+				    bbm_server = strdup(ent->data.str.str);
+				}
+			}
+			bb_releaseConfigEntry(ent);
+			ent = NULL;
+		}
+	}
+	
 
 	if(irc_nick && !irc_user){
 		irc_user = strdup(irc_nick);

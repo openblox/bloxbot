@@ -43,9 +43,35 @@ static void _bb_destroy_plugin(void* vdPlug){
 	free(plug);
 }
 
+static void _bb_destroy_cmd(void* vdCmd){
+	bloxbot_Command* cmd = (bloxbot_Command*)vdCmd;
+	if(cmd->isAlias){
+		free(cmd->cmdName);
+	}else{
+		free(cmd->cmdName);
+		free(cmd->helpString);
+	}
+	free(cmd);
+}
+
+int _bb_cmd_reload(bloxbot_Plugin* plugin, char* target, char* srcNick, char* srcLogin, char* srcHost, unsigned char isPublic, char* cmd, char* argString){
+	if(blox_isAdmin(srcNick, srcLogin, srcHost)){
+		blox_msgToUser(target, srcNick, isPublic, "Reloading...");
+		
+	    bb_reloadPlugins();
+		
+		blox_msgToUser(target, srcNick, isPublic, "Reload complete.");
+	}else{
+		blox_msgToUser(target, srcNick, isPublic, "Permission denied.");
+	}
+	return 0;
+}
+
 void _bb_plugin_init(){
 	pluginTable = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, _bb_destroy_plugin);
-	cmdTable = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	cmdTable = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, _bb_destroy_cmd);
+
+	bb_addCommand(NULL, "reload", _bb_cmd_reload, "Reloads plugins");
 }
 
 void bb_unloadPlugin(char* name){
@@ -183,15 +209,278 @@ void bb_reloadPlugins(){
 	puts("Reload complete");
 }
 
-int bb_addCommand(bloxbot_Plugin* plug, char* cmdName, bloxbot_plugin_cmd_fnc cmdFnc){
+int bb_addCommand(bloxbot_Plugin* plug, char* cmdName, bloxbot_plugin_cmd_fnc cmdFnc, char* helpString){
+    bloxbot_Command* cmd = malloc(sizeof(bloxbot_Command));
+	if(!cmd){
+		puts("Out of memory.");
+		exit(EXIT_FAILURE);
+		return 1;
+	}
+
+	cmd->isAlias = 0;
+	cmd->cmdName = strdup(cmdName);
+	cmd->helpString = strdup(helpString);
+	cmd->cmdFnc = cmdFnc;
+	cmd->plugin = plug;
+	
+	g_hash_table_insert(cmdTable, strdup(cmdName), cmd);
 	return 0;
 }
 
 int bb_addAlias(char* aliasName, char* cmdName){
+	bloxbot_Command* cmd = malloc(sizeof(bloxbot_Command));
+	if(!cmd){
+		puts("Out of memory.");
+		exit(EXIT_FAILURE);
+		return 1;
+	}
+
+	cmd->isAlias = 1;
+	cmd->cmdName = strdup(cmdName);
+	cmd->helpString = NULL;
+	cmd->cmdFnc = NULL;
+	
+	g_hash_table_insert(cmdTable, strdup(aliasName), cmd);
 	return 0;
 }
 
 int bb_removeCommand(char* cmdName){
+	g_hash_table_remove(cmdTable, cmdName);
+	return 0;
+}
+
+bloxbot_Command* bb_getCommandByName(char* cmdName){
+    printf("Getting command: %s\n", cmdName);
+	GHashTableIter iter;
+	
+	void* vdCmd = g_hash_table_lookup(cmdTable, cmdName);
+	if(vdCmd){
+		bloxbot_Command* tCmd = (bloxbot_Command*)vdCmd;
+
+	    if(tCmd->isAlias){
+			return bb_getCommandByName(tCmd->cmdName);
+		}else{
+			return tCmd;
+		}
+	}
+
+	return NULL;
+}
+
+#define _BB_ARG_PROC_STATE_NORM 0
+#define _BB_ARG_PROC_STATE_QUOTE_DOUBLE 1
+#define _BB_ARG_PROC_STATE_QUOTE_SINGLE 2
+
+void bb_freeArgs(char** args, int numArgs){
+	int i;
+	for(i = 0; i < numArgs; i++){
+		free(args[i]);
+	}
+	free(args);
+}
+
+int bb_processArgs(char* argString, char*** argsTo){
+	char** toRet = NULL;
+	int numArgs = 0;
+	
+	int lenArg = strlen(argString);
+	
+	char* thisArg = malloc(lenArg);
+	int thisArgI = 0;
+
+    int state = _BB_ARG_PROC_STATE_NORM;
+	unsigned char nextEscaped = 0;
+
+	int i;
+	for(i = 0; i < lenArg; i++){
+		if(state == _BB_ARG_PROC_STATE_NORM){
+			if(nextEscaped){
+				nextEscaped = 0;
+			}
+			
+			if(argString[i] == '\'' && thisArgI == 0){
+				state = _BB_ARG_PROC_STATE_QUOTE_SINGLE;
+				continue;
+			}else if(argString[i] == '"' && thisArgI == 0){
+				state = _BB_ARG_PROC_STATE_QUOTE_DOUBLE;
+				continue;
+			}else{
+				if(argString[i] != ' '){
+					thisArg[thisArgI] = argString[i];
+					thisArgI++;
+					continue;
+				}else{
+					if(thisArgI > 0){
+						char** newToRet = realloc(toRet, sizeof(char*) * (numArgs + 1));
+						if(!newToRet){
+							int b;
+							for(b = 0; b < numArgs; b++){
+								free(toRet[b]);
+							}
+							free(toRet);
+							free(thisArg);
+							return -1;
+						}
+						
+						toRet = newToRet;
+						toRet[numArgs] = strndup(thisArg, thisArgI);
+						numArgs++;
+						thisArgI = 0;
+					}
+				}
+			}
+		}else if(state == _BB_ARG_PROC_STATE_QUOTE_DOUBLE){
+			if(argString[i] == '\\'){
+				if(nextEscaped){
+					thisArg[thisArgI] = argString[i];
+					thisArgI++;
+					nextEscaped = 0;
+				}else{
+					nextEscaped = 1;
+				}
+				continue;
+			}else if(argString[i] == '"'){
+				if(nextEscaped){
+					thisArg[thisArgI] = argString[i];
+					thisArgI++;
+					nextEscaped = 0;
+				}else{
+					char** newToRet = realloc(toRet, sizeof(char*) * (numArgs + 1));
+					if(!newToRet){
+						int b;
+						for(b = 0; b < numArgs; b++){
+							free(toRet[b]);
+						}
+						free(toRet);
+						free(thisArg);
+						return -1;
+					}
+						
+					toRet = newToRet;
+					toRet[numArgs] = strndup(thisArg, thisArgI);
+					numArgs++;
+					thisArgI = 0;
+					state = _BB_ARG_PROC_STATE_NORM;
+				}
+				continue;
+			}else{
+				if(nextEscaped){
+					nextEscaped = 0;
+				}
+				thisArg[thisArgI] = argString[i];
+				thisArgI++;
+			}
+		}else if(state == _BB_ARG_PROC_STATE_QUOTE_SINGLE){
+			if(argString[i] == '\\'){
+				if(nextEscaped){
+					thisArg[thisArgI] = argString[i];
+					thisArgI++;
+					nextEscaped = 0;
+				}else{
+					nextEscaped = 1;
+				}
+				continue;
+			}else if(argString[i] == '\''){
+				if(nextEscaped){
+					thisArg[thisArgI] = argString[i];
+					thisArgI++;
+					nextEscaped = 0;
+				}else{
+					char** newToRet = realloc(toRet, sizeof(char*) * (numArgs + 1));
+					if(!newToRet){
+						int b;
+						for(b = 0; b < numArgs; b++){
+							free(toRet[b]);
+						}
+						free(toRet);
+						free(thisArg);
+						return -1;
+					}
+						
+					toRet = newToRet;
+					toRet[numArgs] = strndup(thisArg, thisArgI);
+					numArgs++;
+					thisArgI = 0;
+					state = _BB_ARG_PROC_STATE_NORM;
+				}
+				continue;
+			}else{
+				if(nextEscaped){
+					nextEscaped = 0;
+				}
+				thisArg[thisArgI] = argString[i];
+				thisArgI++;
+			}
+		}
+	}
+
+	if(thisArgI > 0){
+		char** newToRet = realloc(toRet, sizeof(char*) * (numArgs + 1));
+		if(!newToRet){
+			int b;
+			for(b = 0; b < numArgs; b++){
+				free(toRet[b]);
+			}
+			free(toRet);
+			free(thisArg);
+			return -1;
+		}
+						
+		toRet = newToRet;
+		toRet[numArgs] = strndup(thisArg, thisArgI);
+		numArgs++;
+
+		free(thisArg);
+	}
+
+	*argsTo = toRet;
+	return numArgs;
+}
+
+int bb_processCommand(char* target, char* srcNick, char* srcLogin, char* srcHost, char* msg){
+	unsigned char isPublic = 0;
+	
+	int curIndex = 0;
+	int i;
+	int msgLen = strlen(msg);
+	for(i = 0; i < msgLen; i++){
+		if(msg[i] == '!'){
+			isPublic = !isPublic;
+		}else{
+			curIndex = i;
+			break;
+		}
+	}
+
+	if(!target){
+		isPublic = 0;
+	}
+
+	int cmdLen = 0;
+	for(; i < msgLen + 1; i++){
+		if(msg[i] == ' ' || msg[i] == '\n' || msg[i] == '\r' || msg[i] == '\0'){
+			cmdLen = i - curIndex;
+			break;
+		}
+	}
+
+	if(cmdLen > 0){
+		char* cmd = malloc(cmdLen + 1);
+		if(!cmd){
+			puts("Out of memory.");
+			exit(EXIT_FAILURE);
+			return 1;
+		}
+		strncpy(cmd, &msg[curIndex], cmdLen);
+		cmd[cmdLen] = '\0';
+
+		bloxbot_Command* theCmd = bb_getCommandByName(cmd);
+
+		if(theCmd){
+			return theCmd->cmdFnc(theCmd->plugin, target, srcNick, srcLogin, srcHost, isPublic, cmd, &msg[curIndex + cmdLen + 1]);
+		}
+	}
+
 	return 0;
 }
 
