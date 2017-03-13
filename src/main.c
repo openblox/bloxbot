@@ -47,9 +47,6 @@ long int irc_last_msg = 0;
 
 char* bb_confFile = NULL;
 
-char* _bbinPath = NULL;
-int _bboutPort = 14425;
-
 char* irc_user = NULL;
 char* irc_nick = NULL;
 char* irc_gecos = NULL;
@@ -369,9 +366,25 @@ void main_ircbot(){
 			return;
 		}
 	}
-	
-    bb_loadPlugin("ob");
-	bb_loadPlugin("cmd");
+
+	{
+		bloxbot_ConfigEntry* ent = bb_getConfigEntry("plugins");
+		if(ent){
+			if(ent->type == BLOXBOT_CONF_ENT_TYPE_ARRAY){
+				int i;
+				for(i = 0; i < ent->data.array.len; i++){
+					bloxbot_ConfigEntry* arrayEnt = ent->data.array.array[i];
+					if(arrayEnt){
+						if(arrayEnt->type == BLOXBOT_CONF_ENT_TYPE_STR){
+							bb_loadPlugin(arrayEnt->data.str.str);
+						}
+					}
+				}
+			}
+			bb_releaseConfigEntry(ent);
+			ent = NULL;
+		}
+	}
 
     //Actually do the connection
     bloxbot_open_fnc connFunc = NULL;
@@ -467,8 +480,6 @@ int main(int argc, char* argv[]){
 
 	unsigned char bb_oneshot = 0;
 
-	_bbinPath = strdup("/public/bb-in");
-
     static struct option long_opts[] = {
         {"version", no_argument, 0, 'v'},
         {"help", no_argument, 0, 'h'},
@@ -532,10 +543,6 @@ int main(int argc, char* argv[]){
 				puts("   --config                    Uses a specified file instead of bloxbot.conf");
 				puts("   --join                      Adds a channel to the join list.");
 				puts("   -O, --oneshot               Only fork once.");
-				puts("");
-				puts("OB Module:");
-				puts("   --ob-in-path                Sets the path to use as unix socket");
-				puts("   --ob-out-port               Sets port to use for o");
                 puts("");
                 puts("   -v, --version               Prints version information and exits");
                 puts("   -h, --help                  Prints this help text and exits");
@@ -647,15 +654,6 @@ int main(int argc, char* argv[]){
 				if(strcmp(long_opts[opt_idx].name, "config") == 0){
 				    free(bb_confFile);
 				    bb_confFile = strdup(optarg);
-					break;
-				}
-				if(strcmp(long_opts[opt_idx].name, "ob-in-path") == 0){
-				    free(_bbinPath);
-					_bbinPath = strdup(optarg);
-					break;
-				}
-				if(strcmp(long_opts[opt_idx].name, "ob-out-port") == 0){
-					_bboutPort = atoi(optarg);
 					break;
 				}
 				break;

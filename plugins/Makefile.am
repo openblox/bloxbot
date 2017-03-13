@@ -1,1 +1,1 @@
-SUBDIRS = ob cmd
+SUBDIRS = cmd obus

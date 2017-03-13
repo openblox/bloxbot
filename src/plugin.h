@@ -25,7 +25,7 @@
 
 typedef struct bloxbot_Plugin bloxbot_Plugin;
 
-typedef void (*bloxbot_plugin_init_fnc)(bloxbot_Plugin* plugin);
+typedef int (*bloxbot_plugin_init_fnc)(bloxbot_Plugin* plugin);
 typedef void (*bloxbot_plugin_deinit_fnc)(bloxbot_Plugin* plugin);
 
 //Continue processing other hooks

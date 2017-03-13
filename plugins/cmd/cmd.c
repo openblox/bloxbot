@@ -111,20 +111,22 @@ int bb_cmd_say(bloxbot_Plugin* plugin, char* target, char* srcNick, char* srcLog
 	return 0;
 }
 
-void bloxbot_plugin_cmd_init(bloxbot_Plugin* plug){
+int bloxbot_plugin_cmd_init(bloxbot_Plugin* plug){
 	puts("Init called.");
-	bb_addCommand(plug, "echo", bb_cmd_echo, "Echos a string passed back to the user");
 	bb_addCommand(plug, "quit", bb_cmd_quit, "Makes bloxbot quit");
 	bb_addCommand(plug, "join", bb_cmd_join, "Makes bloxbot join a channel");
 	bb_addCommand(plug, "part", bb_cmd_part, "Makes bloxbot part a channel");
 	bb_addCommand(plug, "say", bb_cmd_say, "Makes bloxbot send a message to a target");
 	bb_addAlias("send", "say");
+
+	return 0;
 }
 
 void bloxbot_plugin_cmd_deinit(){
 	puts("Deinit called.");
-	bb_removeCommand("echo");
 	bb_removeCommand("quit");
 	bb_removeCommand("join");
 	bb_removeCommand("part");
+	bb_removeCommand("say");
+	bb_removeCommand("send");
 }

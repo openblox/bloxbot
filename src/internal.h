@@ -28,9 +28,6 @@
 extern bloxbot_Conn* irc_conn;
 extern long int irc_last_msg;
 
-extern char* _bbinPath;
-extern int _bboutPort;
-
 struct bb_QueueItem{
     char* line;
     struct bb_QueueItem* next;

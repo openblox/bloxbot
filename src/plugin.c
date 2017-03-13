@@ -83,8 +83,10 @@ void bb_unloadPlugin(char* name){
 	}
 	bloxbot_Plugin* oplug = (bloxbot_Plugin*)g_hash_table_lookup(pluginTable, name);
 	if(oplug){
-		oplug->deinit(oplug);
 		g_hash_table_remove(pluginTable, name);
+		oplug->deinit(oplug);
+		dlclose(oplug->_handle);
+		free(oplug);
 	}
 }
 
@@ -168,7 +170,13 @@ bloxbot_Plugin* bb_loadPlugin(char* name){
 
 	g_hash_table_insert(pluginTable, strdup(name), plug);
 
-	plug->init(plug);
+	int r = plug->init(plug);
+	if(r != 0){
+		plug->deinit(plug);
+		dlclose(plug->_handle);
+		free(plug);
+		return NULL;
+	}
 
 	return plug;
 }
@@ -250,7 +258,6 @@ int bb_removeCommand(char* cmdName){
 }
 
 bloxbot_Command* bb_getCommandByName(char* cmdName){
-    printf("Getting command: %s\n", cmdName);
 	GHashTableIter iter;
 	
 	void* vdCmd = g_hash_table_lookup(cmdTable, cmdName);
