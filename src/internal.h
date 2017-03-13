@@ -39,4 +39,6 @@ void _bb_run_queue();
 void _bb_push_queue(char* line);
 long int _bb_curtime();
 
+void _bb_shutdown();
+
 #endif

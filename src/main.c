@@ -449,6 +449,10 @@ void main_ircbot(){
     _exit(EXIT_SUCCESS);
 }
 
+void _bb_shutdown(){
+	stillConnected = 0;
+}
+
 unsigned char _bb_addJoinCmd(char* chan, int len){
 	if(!join_str){
 		join_str = strndup(chan, len);

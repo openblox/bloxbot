@@ -168,6 +168,35 @@ void* obusThreadFnc(void* vud){
 
 							json_object_put(chanObj);
 						}
+					}else if(strcmp(json_object_get_string(typeObj), "quit") == 0){
+						json_object* reasonObj;
+						if(json_object_object_get_ex(jobj, "reason", &reasonObj)){
+							if(!json_object_is_type(reasonObj, json_type_string)){
+								json_object_put(reasonObj);
+							    reasonObj = NULL;
+							}
+						}else{
+							json_object_put(reasonObj);
+						    reasonObj = NULL;
+						}
+
+						if(reasonObj){
+							char* quitReason = (char*)json_object_get_string(reasonObj);
+							int quitReasonLen = strlen(quitReason);
+							
+							char quitCmd[9 + quitReasonLen];
+							strncpy(quitCmd, "QUIT :", 6);
+							strncat(quitCmd, quitReason, quitReasonLen);
+							strncat(quitCmd, "\r\n", 2);
+							
+						    blox_sendDirectly(quitCmd);
+							_bb_shutdown();
+
+							json_object_put(reasonObj);
+						}else{
+							blox_sendDirectly("QUIT :Shutting down.\r\n");
+							_bb_shutdown();
+						}
 					}
 				}
 
