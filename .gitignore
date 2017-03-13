@@ -35,3 +35,4 @@
 /plugins/*/*_la-*
 /bb-in
 /test/node_modules
+/bloxbot.conf
