@@ -88,7 +88,7 @@ void* obusThreadFnc(void* vud){
 		return NULL;
 	}
 
-	r = zmq_setsockopt(zmq_sub, ZMQ_SUBSCRIBE, "bloxbot:", 0);
+	r = zmq_setsockopt(zmq_sub, ZMQ_SUBSCRIBE, "bloxbot:", 8);
 	if(r != 0){
 		zmq_close(zmq_sub);
 		puts("[obus] ERROR: Failed to subscribe.");
@@ -125,7 +125,7 @@ void* obusThreadFnc(void* vud){
 		}else if(r > 8){
 			puts(&buffer[8]);
 
-			json_object* jobj = obus_parseMessage(buffer, r - 8);
+			json_object* jobj = obus_parseMessage(&buffer[8], r - 8);
 			if(json_object_is_type(jobj, json_type_object)){
 				json_object* typeObj;
 				if(json_object_object_get_ex(jobj, "command", &typeObj)){
@@ -186,7 +186,7 @@ void* obusThreadFnc(void* vud){
 	return NULL;//Makes compilers stop complaining
 }
 
-int bloxbot_plugin_ob_init(bloxbot_Plugin* plug){
+int bloxbot_plugin_obus_init(bloxbot_Plugin* plug){
 	struct bb_plugin_ob_ud* plug_ud = malloc(sizeof(struct bb_plugin_ob_ud));
 
 	if(!plug_ud){
@@ -245,7 +245,7 @@ int bloxbot_plugin_ob_init(bloxbot_Plugin* plug){
 	return 0;
 }
 
-void bloxbot_plugin_ob_deinit(bloxbot_Plugin* plug){
+void bloxbot_plugin_obus_deinit(bloxbot_Plugin* plug){
 	struct bb_plugin_ob_ud* plug_ud = (struct bb_plugin_ob_ud*)plug->ud;
 	if(plug_ud){
 		plug_ud->keepRunning = 0;
