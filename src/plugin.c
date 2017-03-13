@@ -39,7 +39,6 @@ struct _bb_Cmd{
 
 static void _bb_destroy_plugin(void* vdPlug){
 	bloxbot_Plugin* plug = (bloxbot_Plugin*)vdPlug;
-	dlclose(plug->_handle);
 	free(plug);
 }
 
@@ -85,7 +84,6 @@ void bb_unloadPlugin(char* name){
 	if(oplug){
 		g_hash_table_remove(pluginTable, name);
 		oplug->deinit(oplug);
-		dlclose(oplug->_handle);
 		free(oplug);
 	}
 }
