@@ -116,7 +116,9 @@ void* obusThreadFnc(void* vud){
 			if(errno == ENOTSUP || errno == ETERM || errno == ENOTSOCK){
 				puts("Failed to receive message.");
 			    printf("Error: %i, str: %s\n", errno, strerror(errno));
-				return NULL;
+				if(errno == ETERM || errno == ENOTSUP){
+					return NULL;
+				}
 			}else{
 				if(errno == EFSM){
 					puts("EFSM");
