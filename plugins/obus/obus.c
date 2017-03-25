@@ -116,6 +116,14 @@ void* obusThreadFnc(void* vud){
 			if(errno == ENOTSUP || errno == ETERM || errno == ENOTSOCK){
 				puts("Failed to receive message.");
 			    printf("Error: %i, str: %s\n", errno, strerror(errno));
+				if(errno == ENOTSOCK){
+					int r2 = zmq_connect(zmq_sub, plug_ud->pubServ);
+					if(r2 != 0){
+						zmq_close(zmq_sub);
+						puts("[obus] ERROR: Failed to connect to message bus.");
+						return NULL;
+					}
+				}
 				if(errno == ETERM || errno == ENOTSUP){
 					return NULL;
 				}
