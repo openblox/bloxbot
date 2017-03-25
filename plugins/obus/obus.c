@@ -114,8 +114,8 @@ void* obusThreadFnc(void* vud){
 				continue;
 			}
 			if(errno == ENOTSUP || errno == ETERM || errno == ENOTSOCK){
-				zmq_close(zmq_sub);
 				puts("Failed to receive message.");
+			    printf("Error: %i, str: %s\n", errno, strerror(errno));
 				return NULL;
 			}else{
 				if(errno == EFSM){
