@@ -212,7 +212,7 @@ int handleLine(char* inBuffer, int lineLen){
 						if(join_str){
 							char joinLine[7 + join_strl];
 							strcpy(joinLine, "JOIN ");
-							strcat(joinLine, join_str);
+							strncat(joinLine, join_str, join_strl);
 							strcat(joinLine, "\r\n");
 							
 							blox_sendDirectly(joinLine);
@@ -458,7 +458,7 @@ unsigned char _bb_addJoinCmd(char* chan, int len){
 		join_str = strndup(chan, len);
 		join_strl = len;
 	}else{
-		char* tjoins = malloc(len + 1);
+		char* tjoins = malloc(len + 2);
 		if(!tjoins){
 			free(join_str);
 			exit(EXIT_FAILURE);
