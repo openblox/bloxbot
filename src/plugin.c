@@ -82,9 +82,8 @@ void bb_unloadPlugin(char* name){
 	}
 	bloxbot_Plugin* oplug = (bloxbot_Plugin*)g_hash_table_lookup(pluginTable, name);
 	if(oplug){
-		g_hash_table_remove(pluginTable, name);
 		oplug->deinit(oplug);
-		free(oplug);
+		g_hash_table_remove(pluginTable, name);
 	}
 }
 
