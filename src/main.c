@@ -474,7 +474,7 @@ unsigned char _bb_addJoinCmd(char* chan, int len){
 			return EXIT_FAILURE;
 		}
 		join_str = tmp_join_str;
-		strncat(join_str, tjoins, len);
+		strncat(join_str, tjoins, len + 1);
 		join_strl += len + 1;
 	}
 
