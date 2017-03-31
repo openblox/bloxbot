@@ -137,7 +137,7 @@ void* obusThreadFnc(void* vud){
 
 			json_object* jobj = obus_parseMessage(&buffer[8], r - 8);
 			if(json_object_is_type(jobj, json_type_object)){
-				json_object* typeObj;
+				json_object* typeObj = NULL;
 				if(json_object_object_get_ex(jobj, "command", &typeObj)){
 					if(!json_object_is_type(typeObj, json_type_string)){
 						json_object_put(typeObj);
