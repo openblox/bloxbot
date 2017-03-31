@@ -467,7 +467,7 @@ unsigned char _bb_addJoinCmd(char* chan, int len){
 		strcpy(tjoins, ",");
 		strncat(tjoins, chan, len);
 		
-		char* tmp_join_str = realloc(join_str, join_strl + len + 1);
+		char* tmp_join_str = realloc(join_str, join_strl + len + 2);
 		if(!tmp_join_str){
 			free(join_str);
 			exit(EXIT_FAILURE);
