@@ -111,22 +111,52 @@ int bb_cmd_say(bloxbot_Plugin* plugin, char* target, char* srcNick, char* srcLog
 	return 0;
 }
 
+int bb_cmd_help(bloxbot_Plugin* plugin, char* target, char* srcNick, char* srcLogin, char* srcHost, unsigned char isPublic, char* cmd, char* argString){
+    unsigned char isAdm = blox_isAdmin(srcNick, srcLogin, srcHost);
+	
+	char** args;
+	int numArgs = bb_processArgs(argString, &args);
+
+	if(numArgs > 0){
+		bloxbot_Command* bbCmd = bb_getCommandByName(args[0]);
+		if(bbCmd){
+			char* helpTxt = bbCmd->helpString;
+			if(!helpTxt){
+				helpTxt = "No help text found for this command.";
+			}
+			char msgTxt[strlen(bbCmd->cmdName) + 3 + strlen(helpTxt)];
+			strcpy(msgTxt, bbCmd->cmdName);
+			strcat(msgTxt, ": ");
+			strcat(msgTxt, helpTxt);
+			
+			blox_msgToUser(target, srcNick, isPublic, msgTxt);
+		}else{
+			blox_msgToUser(target, srcNick, isPublic, "Command not found.");
+		}
+	}else{
+		blox_msgToUser(target, srcNick, isPublic, "Request help with a command. Takes one argument, a command.");
+	}
+		
+	bb_freeArgs(args, numArgs);
+	return 0;
+}
+
 int bloxbot_plugin_cmd_init(bloxbot_Plugin* plug){
-	puts("Init called.");
 	bb_addCommand(plug, "quit", bb_cmd_quit, "Makes bloxbot quit");
 	bb_addCommand(plug, "join", bb_cmd_join, "Makes bloxbot join a channel");
 	bb_addCommand(plug, "part", bb_cmd_part, "Makes bloxbot part a channel");
 	bb_addCommand(plug, "say", bb_cmd_say, "Makes bloxbot send a message to a target");
 	bb_addAlias("send", "say");
+	bb_addCommand(plug, "help", bb_cmd_help, "Returns help text for a command");
 
 	return 0;
 }
 
 void bloxbot_plugin_cmd_deinit(){
-	puts("Deinit called.");
 	bb_removeCommand("quit");
 	bb_removeCommand("join");
 	bb_removeCommand("part");
 	bb_removeCommand("say");
 	bb_removeCommand("send");
+	bb_removeCommand("help");
 }
