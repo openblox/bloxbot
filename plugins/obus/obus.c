@@ -114,16 +114,34 @@ void* obusThreadFnc(void* vud){
 				continue;
 			}
 			if(errno == ENOTSUP || errno == ETERM || errno == ENOTSOCK){
-				puts("Failed to receive message.");
-			    printf("Error: %i, str: %s\n", errno, strerror(errno));
-				if(errno == ENOTSOCK){
+			    if(errno == ENOTSOCK){
+				    zmq_close(zmq_sub);
+
+					zmq_sub = zmq_socket(zmq_ctx, ZMQ_SUB);
 					int r2 = zmq_connect(zmq_sub, plug_ud->pubServ);
 					if(r2 != 0){
 						zmq_close(zmq_sub);
 						puts("[obus] ERROR: Failed to connect to message bus.");
 						return NULL;
 					}
+
+					r2 = zmq_setsockopt(zmq_sub, ZMQ_SUBSCRIBE, "bloxbot:", 8);
+					if(r2 != 0){
+						zmq_close(zmq_sub);
+						puts("[obus] ERROR: Failed to subscribe.");
+						return NULL;
+					}
+
+					r2 = zmq_setsockopt(zmq_sub, ZMQ_RCVTIMEO, &recv_timeout, sizeof(recv_timeout));
+					if(r2 != 0){
+						zmq_close(zmq_sub);
+						puts("[obus] ERROR: Failed to set recv timeout.");
+						return NULL;
+					}
+					continue;
 				}
+				puts("Failed to receive message.");
+			    printf("Error: %i, str: %s\n", errno, strerror(errno));
 				if(errno == ETERM || errno == ENOTSUP){
 					return NULL;
 				}
