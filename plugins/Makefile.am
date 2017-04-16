@@ -1,1 +1,1 @@
-SUBDIRS = cmd obus
+SUBDIRS = cmd obus piracy
