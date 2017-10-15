@@ -179,7 +179,7 @@ bloxbot_Conn* bloxbot_conn_tls(char* addr, int port){
         return NULL;
     }
 
-    //Get everything ready to return
+    // Get everything ready to return
     bloxbot_Conn* conn = malloc(sizeof(bloxbot_Conn));
     if(!conn){
         return NULL;

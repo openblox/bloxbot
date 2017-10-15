@@ -20,32 +20,32 @@
 #ifndef BB_CONF_H_
 #define BB_CONF_H_
 
-//We include bloxbot.h here so that plugins don't have to do the runaround
+// We include bloxbot.h here so that plugins don't have to do the runaround
 #include "bloxbot.h"
 
-//int
+// int
 #define BLOXBOT_CONF_ENT_TYPE_INT 1
-//char*
+// char*
 #define BLOXBOT_CONF_ENT_TYPE_STR 2
-//bloxbot_ConfigEntry**
+// bloxbot_ConfigEntry**
 #define BLOXBOT_CONF_ENT_TYPE_ARRAY 3
 
 typedef struct bloxbot_ConfigEntry{
-	unsigned char type;
-	int refs;
-	union{
-		int integer;
-		char cchar;
-		unsigned char uchar;
-		struct{
-			int len;
-			char* str;
-		} str;
-		struct{
-				int len;
-				struct bloxbot_ConfigEntry** array;
-		} array;
-	} data;
+    unsigned char type;
+    int refs;
+    union{
+        int integer;
+        char cchar;
+        unsigned char uchar;
+        struct{
+            int len;
+            char* str;
+        } str;
+        struct{
+            int len;
+            struct bloxbot_ConfigEntry** array;
+        } array;
+    } data;
 } bloxbot_ConfigEntry;
 
 unsigned char bb_loadConfig(char* name);

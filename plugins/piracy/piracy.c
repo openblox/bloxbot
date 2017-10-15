@@ -23,16 +23,25 @@
 #include <stdlib.h>
 
 int bb_cmd_piracy(bloxbot_Plugin* plugin, char* target, char* srcNick, char* srcLogin, char* srcHost, unsigned char isPublic, char* cmd, char* argString){
-    blox_msgToUser(target, srcNick, isPublic, "https://upload.wikimedia.org/wikipedia/commons/d/d2/British_sailors_boarding_an_Algerine_pirate_ship.jpg");
-	return 0;
+    char** args;
+    int numArgs = bb_processArgs(argString, &args);
+
+    if(numArgs > 0){
+        blox_msgToUser(target, args[0], 1, "https://upload.wikimedia.org/wikipedia/commons/d/d2/British_sailors_boarding_an_Algerine_pirate_ship.jpg");
+    }else{
+        blox_msgToUser(target, srcNick, isPublic, "https://upload.wikimedia.org/wikipedia/commons/d/d2/British_sailors_boarding_an_Algerine_pirate_ship.jpg");
+    }
+
+    bb_freeArgs(args, numArgs);
+    return 0;
 }
 
 int bloxbot_plugin_piracy_init(bloxbot_Plugin* plug){
-	bb_addCommand(plug, "piracy", bb_cmd_piracy, "Shows a useful graphic depicting piracy.");
+    bb_addCommand(plug, "piracy", bb_cmd_piracy, "Shows a useful graphic depicting piracy.");
 
-	return 0;
+    return 0;
 }
 
 void bloxbot_plugin_piracy_deinit(){
-	bb_removeCommand("piracy");
+    bb_removeCommand("piracy");
 }

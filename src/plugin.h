@@ -20,7 +20,7 @@
 #ifndef BB_PLUGIN_H_
 #define BB_PLUGIN_H_
 
-//We include bloxbot.h here so that plugins don't have to do the runaround
+// We include bloxbot.h here so that plugins don't have to do the runaround
 #include "bloxbot.h"
 
 typedef struct bloxbot_Plugin bloxbot_Plugin;
@@ -28,13 +28,13 @@ typedef struct bloxbot_Plugin bloxbot_Plugin;
 typedef int (*bloxbot_plugin_init_fnc)(bloxbot_Plugin* plugin);
 typedef void (*bloxbot_plugin_deinit_fnc)(bloxbot_Plugin* plugin);
 
-//Continue processing other hooks
+// Continue processing other hooks
 #define BB_RET_OK 0
 #define BB_RET_ERR 1
-//Stops processing after this hook returns
+// Stops processing after this hook returns
 #define BB_RET_STOP 2
 
-//The below are only used by command handlers
+// The below are only used by command handlers
 #define BB_RET_QUIT 6
 
 typedef int (*bloxbot_plugin_msg_fnc)(bloxbot_Plugin* plugin, char* target, char* srcNick, char* srcLogin, char* srcHost, char* msg);
@@ -46,25 +46,25 @@ typedef int (*bloxbot_plugin_cmd_fnc)(bloxbot_Plugin* plugin, char* target, char
 #define _BB_LONGEST_SYM_LEN 13
 
 typedef struct bloxbot_Plugin{
-	void* _handle;//DO NOT USE THIS IN PLUGIN CODE!
+    void* _handle;// DO NOT USE THIS IN PLUGIN CODE!
 
-	//Feel free to set this to whatever you like, it is not used internally. It is here entirely for plugin use.
-	void* ud;
+    // Feel free to set this to whatever you like, it is not used internally. It is here entirely for plugin use.
+    void* ud;
 
-	bloxbot_plugin_init_fnc init;
-	bloxbot_plugin_deinit_fnc deinit;
+    bloxbot_plugin_init_fnc init;
+    bloxbot_plugin_deinit_fnc deinit;
 
-	bloxbot_plugin_msg_fnc on_msg;
-	bloxbot_plugin_privmsg_fnc on_privmsg;
-	bloxbot_plugin_servercode_fnc on_servercode;
+    bloxbot_plugin_msg_fnc on_msg;
+    bloxbot_plugin_privmsg_fnc on_privmsg;
+    bloxbot_plugin_servercode_fnc on_servercode;
 } bloxbot_Plugin;
 
 typedef struct bloxbot_Command{
     bloxbot_plugin_cmd_fnc cmdFnc;
-	char* helpString;
-	char* cmdName;
-	unsigned char isAlias;
-	bloxbot_Plugin* plugin;
+    char* helpString;
+    char* cmdName;
+    unsigned char isAlias;
+    bloxbot_Plugin* plugin;
 } bloxbot_Command;
 
 void _bb_plugin_init();

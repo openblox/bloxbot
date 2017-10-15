@@ -33,283 +33,283 @@
 #include <json.h>
 
 struct bb_plugin_ob_ud{
-	void* zmq_ctx;
+    void* zmq_ctx;
 
-	char* pubServ;
-	unsigned char keepRunning;
+    char* pubServ;
+    unsigned char keepRunning;
 
-	pthread_t obusThread;
+    pthread_t obusThread;
 };
 
-//obus defines the max length of a message as 1024
+// obus defines the max length of a message as 1024
 #define OBUS_MAX_MESSAGE_LEN 1024
 
-//Copy-pasted from obus
+// Copy-pasted from obus
 
 struct json_object* obus_parseMessage(char* str, int len){
-	struct json_tokener* tok = NULL;
+    struct json_tokener* tok = NULL;
 
-	tok = json_tokener_new();
-	if(!tok){
-		return NULL;
-	}
-	
-	struct json_object* jobj = NULL;
-	enum json_tokener_error jerr;
+    tok = json_tokener_new();
+    if(!tok){
+        return NULL;
+    }
 
-	jobj = json_tokener_parse_ex(tok, str, len);
-	jerr = json_tokener_get_error(tok);
+    struct json_object* jobj = NULL;
+    enum json_tokener_error jerr;
 
-	if(jerr != json_tokener_success){
-		fprintf(stderr, "JSON parse error: %s\n", json_tokener_error_desc(jerr));
-		if(jobj){
-			json_object_put(jobj);
-		}
-		json_tokener_free(tok);
-		return NULL;
-	}
+    jobj = json_tokener_parse_ex(tok, str, len);
+    jerr = json_tokener_get_error(tok);
 
-	json_tokener_free(tok);
+    if(jerr != json_tokener_success){
+        fprintf(stderr, "JSON parse error: %s\n", json_tokener_error_desc(jerr));
+        if(jobj){
+            json_object_put(jobj);
+        }
+        json_tokener_free(tok);
+        return NULL;
+    }
 
-	return jobj;
+    json_tokener_free(tok);
+
+    return jobj;
 }
 
 void* obusThreadFnc(void* vud){
-	struct bb_plugin_ob_ud* plug_ud = (struct bb_plugin_ob_ud*)vud;
+    struct bb_plugin_ob_ud* plug_ud = (struct bb_plugin_ob_ud*)vud;
 
-	void* zmq_ctx = plug_ud->zmq_ctx;
+    void* zmq_ctx = plug_ud->zmq_ctx;
 
-	void* zmq_sub = zmq_socket(zmq_ctx, ZMQ_SUB);
+    void* zmq_sub = zmq_socket(zmq_ctx, ZMQ_SUB);
 
-	int r = zmq_connect(zmq_sub, plug_ud->pubServ);
-	if(r != 0){
-		zmq_close(zmq_sub);
-		puts("[obus] ERROR: Failed to connect to message bus.");
-		return NULL;
-	}
+    int r = zmq_connect(zmq_sub, plug_ud->pubServ);
+    if(r != 0){
+        zmq_close(zmq_sub);
+        puts("[obus] ERROR: Failed to connect to message bus.");
+        return NULL;
+    }
 
-	r = zmq_setsockopt(zmq_sub, ZMQ_SUBSCRIBE, "bloxbot:", 8);
-	if(r != 0){
-		zmq_close(zmq_sub);
-		puts("[obus] ERROR: Failed to subscribe.");
-		return NULL;
-	}
+    r = zmq_setsockopt(zmq_sub, ZMQ_SUBSCRIBE, "bloxbot:", 8);
+    if(r != 0){
+        zmq_close(zmq_sub);
+        puts("[obus] ERROR: Failed to subscribe.");
+        return NULL;
+    }
 
-	int recv_timeout = 250;//milliseconds
+    int recv_timeout = 250;//milliseconds
 
-	r = zmq_setsockopt(zmq_sub, ZMQ_RCVTIMEO, &recv_timeout, sizeof(recv_timeout));
-	if(r != 0){
-		zmq_close(zmq_sub);
-		puts("[obus] ERROR: Failed to set recv timeout.");
-		return NULL;
-	}
+    r = zmq_setsockopt(zmq_sub, ZMQ_RCVTIMEO, &recv_timeout, sizeof(recv_timeout));
+    if(r != 0){
+        zmq_close(zmq_sub);
+        puts("[obus] ERROR: Failed to set recv timeout.");
+        return NULL;
+    }
 
-	char buffer[OBUS_MAX_MESSAGE_LEN];
+    char buffer[OBUS_MAX_MESSAGE_LEN];
 
-	while(plug_ud->keepRunning){
-		r = zmq_recv(zmq_sub, buffer, OBUS_MAX_MESSAGE_LEN, 0);
+    while(plug_ud->keepRunning){
+        r = zmq_recv(zmq_sub, buffer, OBUS_MAX_MESSAGE_LEN, 0);
 
-		if(r < 0){
-			if(errno == EAGAIN){
-				continue;
-			}
-			if(errno == ENOTSUP || errno == ETERM || errno == ENOTSOCK){
-			    if(errno == ENOTSOCK){
-				    zmq_close(zmq_sub);
+        if(r < 0){
+            if(errno == EAGAIN){
+                continue;
+            }
+            if(errno == ENOTSUP || errno == ETERM || errno == ENOTSOCK){
+                if(errno == ENOTSOCK){
+                    zmq_close(zmq_sub);
 
-					zmq_sub = zmq_socket(zmq_ctx, ZMQ_SUB);
-					int r2 = zmq_connect(zmq_sub, plug_ud->pubServ);
-					if(r2 != 0){
-						zmq_close(zmq_sub);
-						puts("[obus] ERROR: Failed to connect to message bus.");
-						return NULL;
-					}
+                    zmq_sub = zmq_socket(zmq_ctx, ZMQ_SUB);
+                    int r2 = zmq_connect(zmq_sub, plug_ud->pubServ);
+                    if(r2 != 0){
+                        zmq_close(zmq_sub);
+                        puts("[obus] ERROR: Failed to connect to message bus.");
+                        return NULL;
+                    }
 
-					r2 = zmq_setsockopt(zmq_sub, ZMQ_SUBSCRIBE, "bloxbot:", 8);
-					if(r2 != 0){
-						zmq_close(zmq_sub);
-						puts("[obus] ERROR: Failed to subscribe.");
-						return NULL;
-					}
+                    r2 = zmq_setsockopt(zmq_sub, ZMQ_SUBSCRIBE, "bloxbot:", 8);
+                    if(r2 != 0){
+                        zmq_close(zmq_sub);
+                        puts("[obus] ERROR: Failed to subscribe.");
+                        return NULL;
+                    }
 
-					r2 = zmq_setsockopt(zmq_sub, ZMQ_RCVTIMEO, &recv_timeout, sizeof(recv_timeout));
-					if(r2 != 0){
-						zmq_close(zmq_sub);
-						puts("[obus] ERROR: Failed to set recv timeout.");
-						return NULL;
-					}
-					continue;
-				}
-				puts("Failed to receive message.");
-			    printf("Error: %i, str: %s\n", errno, strerror(errno));
-				if(errno == ETERM || errno == ENOTSUP){
-					return NULL;
-				}
-			}else{
-				if(errno == EFSM){
-					puts("EFSM");
-				}
-			}
-		}else if(r > 8){
-			puts(&buffer[8]);
+                    r2 = zmq_setsockopt(zmq_sub, ZMQ_RCVTIMEO, &recv_timeout, sizeof(recv_timeout));
+                    if(r2 != 0){
+                        zmq_close(zmq_sub);
+                        puts("[obus] ERROR: Failed to set recv timeout.");
+                        return NULL;
+                    }
+                    continue;
+                }
+                puts("Failed to receive message.");
+                printf("Error: %i, str: %s\n", errno, strerror(errno));
+                if(errno == ETERM || errno == ENOTSUP){
+                    return NULL;
+                }
+            }else{
+                if(errno == EFSM){
+                    puts("EFSM");
+                }
+            }
+        }else if(r > 8){
+            puts(&buffer[8]);
 
-			json_object* jobj = obus_parseMessage(&buffer[8], r - 8);
-			if(json_object_is_type(jobj, json_type_object)){
-				json_object* typeObj = NULL;
-				if(json_object_object_get_ex(jobj, "command", &typeObj)){
-					if(!json_object_is_type(typeObj, json_type_string)){
-						json_object_put(typeObj);
-					}
-				}else{
-					json_object_put(typeObj);
-				}
+            json_object* jobj = obus_parseMessage(&buffer[8], r - 8);
+            if(json_object_is_type(jobj, json_type_object)){
+                json_object* typeObj = NULL;
+                if(json_object_object_get_ex(jobj, "command", &typeObj)){
+                    if(!json_object_is_type(typeObj, json_type_string)){
+                        json_object_put(typeObj);
+                    }
+                }else{
+                    json_object_put(typeObj);
+                }
 
-				if(typeObj){
-					if(strcmp(json_object_get_string(typeObj), "send") == 0){
-						json_object* chanObj;
-						if(json_object_object_get_ex(jobj, "target", &chanObj)){
-							if(!json_object_is_type(chanObj, json_type_string)){
-								json_object_put(chanObj);
-								chanObj = NULL;
-							}
-						}else{
-							json_object_put(chanObj);
-							chanObj = NULL;
-						}
+                if(typeObj){
+                    if(strcmp(json_object_get_string(typeObj), "send") == 0){
+                        json_object* chanObj;
+                        if(json_object_object_get_ex(jobj, "target", &chanObj)){
+                            if(!json_object_is_type(chanObj, json_type_string)){
+                                json_object_put(chanObj);
+                                chanObj = NULL;
+                            }
+                        }else{
+                            json_object_put(chanObj);
+                            chanObj = NULL;
+                        }
 
-						if(chanObj){
-							json_object* msgObj;
-							if(json_object_object_get_ex(jobj, "msg", &msgObj)){
-								if(!json_object_is_type(chanObj, json_type_string)){
-									json_object_put(msgObj);
-									msgObj = NULL;
-								}
-							}else{
-								json_object_put(msgObj);
-								msgObj = NULL;
-							}
+                        if(chanObj){
+                            json_object* msgObj;
+                            if(json_object_object_get_ex(jobj, "msg", &msgObj)){
+                                if(!json_object_is_type(chanObj, json_type_string)){
+                                    json_object_put(msgObj);
+                                    msgObj = NULL;
+                                }
+                            }else{
+                                json_object_put(msgObj);
+                                msgObj = NULL;
+                            }
 
-							if(msgObj){
-								blox_sendMsg((char*)json_object_get_string(chanObj), (char*)json_object_get_string(msgObj));
-								json_object_put(msgObj);
-							}
+                            if(msgObj){
+                                blox_sendMsg((char*)json_object_get_string(chanObj), (char*)json_object_get_string(msgObj));
+                                json_object_put(msgObj);
+                            }
 
-							json_object_put(chanObj);
-						}
-					}else if(strcmp(json_object_get_string(typeObj), "quit") == 0){
-						json_object* reasonObj;
-						if(json_object_object_get_ex(jobj, "reason", &reasonObj)){
-							if(!json_object_is_type(reasonObj, json_type_string)){
-								json_object_put(reasonObj);
-							    reasonObj = NULL;
-							}
-						}else{
-							json_object_put(reasonObj);
-						    reasonObj = NULL;
-						}
+                            json_object_put(chanObj);
+                        }
+                    }else if(strcmp(json_object_get_string(typeObj), "quit") == 0){
+                        json_object* reasonObj;
+                        if(json_object_object_get_ex(jobj, "reason", &reasonObj)){
+                            if(!json_object_is_type(reasonObj, json_type_string)){
+                                json_object_put(reasonObj);
+                                reasonObj = NULL;
+                            }
+                        }else{
+                            json_object_put(reasonObj);
+                            reasonObj = NULL;
+                        }
 
-						if(reasonObj){
-							char* quitReason = (char*)json_object_get_string(reasonObj);
-							int quitReasonLen = strlen(quitReason);
-							
-							char quitCmd[9 + quitReasonLen];
-							strncpy(quitCmd, "QUIT :", 6);
-							strncat(quitCmd, quitReason, quitReasonLen);
-							strncat(quitCmd, "\r\n", 2);
-							
-						    blox_sendDirectly(quitCmd);
-							_bb_shutdown();
+                        if(reasonObj){
+                            char* quitReason = (char*)json_object_get_string(reasonObj);
+                            int quitReasonLen = strlen(quitReason);
 
-							json_object_put(reasonObj);
-						}else{
-							blox_sendDirectly("QUIT :Shutting down.\r\n");
-							_bb_shutdown();
-						}
-					}
-				}
+                            char quitCmd[9 + quitReasonLen];
+                            strncpy(quitCmd, "QUIT :", 6);
+                            strncat(quitCmd, quitReason, quitReasonLen);
+                            strncat(quitCmd, "\r\n", 2);
 
-				if(typeObj){
-					json_object_put(typeObj);
-				}
-			}
-			if(jobj){
-				json_object_put(jobj);
-			}
-		}
-	}
+                            blox_sendDirectly(quitCmd);
+                            _bb_shutdown();
 
-	zmq_close(zmq_sub);
+                            json_object_put(reasonObj);
+                        }else{
+                            blox_sendDirectly("QUIT :Shutting down.\r\n");
+                            _bb_shutdown();
+                        }
+                    }
+                }
 
-	return NULL;//Makes compilers stop complaining
+                if(typeObj){
+                    json_object_put(typeObj);
+                }
+            }
+            if(jobj){
+                json_object_put(jobj);
+            }
+        }
+    }
+
+    zmq_close(zmq_sub);
+
+    return NULL;// Makes compilers stop complaining
 }
 
 int bloxbot_plugin_obus_init(bloxbot_Plugin* plug){
-	struct bb_plugin_ob_ud* plug_ud = malloc(sizeof(struct bb_plugin_ob_ud));
+    struct bb_plugin_ob_ud* plug_ud = malloc(sizeof(struct bb_plugin_ob_ud));
 
-	if(!plug_ud){
-		puts("Out of memory");
-		exit(EXIT_FAILURE);
-	}
+    if(!plug_ud){
+        puts("Out of memory");
+        exit(EXIT_FAILURE);
+    }
     memset(plug_ud, '\0', sizeof(struct bb_plugin_ob_ud));
 
-	plug->ud = plug_ud;
+    plug->ud = plug_ud;
 
-	plug_ud->zmq_ctx = zmq_ctx_new();
-	plug_ud->keepRunning = 1;
-	plug_ud->pubServ = NULL;
+    plug_ud->zmq_ctx = zmq_ctx_new();
+    plug_ud->keepRunning = 1;
+    plug_ud->pubServ = NULL;
 
-	char* obus_host = strdup("0.0.0.0");
-	int obus_port = 14453;
+    char* obus_host = strdup("0.0.0.0");
+    int obus_port = 14453;
 
-	{
-		bloxbot_ConfigEntry* ent = bb_getConfigEntry("obus-host");
-		if(ent){
-			if(ent->type == BLOXBOT_CONF_ENT_TYPE_STR){
-				if(ent->data.str.len > 0){
-					free(obus_host);
-				    obus_host = strdup(ent->data.str.str);
-				}
-			}
-			bb_releaseConfigEntry(ent);
-			ent = NULL;
-		}
+    {
+        bloxbot_ConfigEntry* ent = bb_getConfigEntry("obus-host");
+        if(ent){
+            if(ent->type == BLOXBOT_CONF_ENT_TYPE_STR){
+                if(ent->data.str.len > 0){
+                    free(obus_host);
+                    obus_host = strdup(ent->data.str.str);
+                }
+            }
+            bb_releaseConfigEntry(ent);
+            ent = NULL;
+        }
 
-		ent = bb_getConfigEntry("obus-port");
-		if(ent){
-			if(ent->type == BLOXBOT_CONF_ENT_TYPE_INT){
-			    obus_port = ent->data.integer;
-			}
-			bb_releaseConfigEntry(ent);
-			ent = NULL;
-		}
-	}
+        ent = bb_getConfigEntry("obus-port");
+        if(ent){
+            if(ent->type == BLOXBOT_CONF_ENT_TYPE_INT){
+                obus_port = ent->data.integer;
+            }
+            bb_releaseConfigEntry(ent);
+            ent = NULL;
+        }
+    }
 
-	//18 is tcp:// + : + 10 for port (lots of buffer, as max port is 5 digits) + 1 '\0'
-	int zmq_host_str_maxlen = 18 + strlen(obus_host);
-	char* zmq_host_str = malloc(zmq_host_str_maxlen);
-	snprintf(zmq_host_str, zmq_host_str_maxlen-1, "tcp://%s:%i", obus_host, obus_port);
+    // 18 is tcp:// + : + 10 for port (lots of buffer, as max port is 5 digits) + 1 '\0'
+    int zmq_host_str_maxlen = 18 + strlen(obus_host);
+    char* zmq_host_str = malloc(zmq_host_str_maxlen);
+    snprintf(zmq_host_str, zmq_host_str_maxlen-1, "tcp://%s:%i", obus_host, obus_port);
 
-	free(obus_host);
+    free(obus_host);
 
-	plug_ud->pubServ = zmq_host_str;
+    plug_ud->pubServ = zmq_host_str;
 
-	int ret = pthread_create(&plug_ud->obusThread, NULL, obusThreadFnc, plug_ud);
-	if(ret){
-		puts("[obus] ERROR: Failed to create obus thread");
-	    return 1;
-	}
+    int ret = pthread_create(&plug_ud->obusThread, NULL, obusThreadFnc, plug_ud);
+    if(ret){
+        puts("[obus] ERROR: Failed to create obus thread");
+        return 1;
+    }
 
-	return 0;
+    return 0;
 }
 
 void bloxbot_plugin_obus_deinit(bloxbot_Plugin* plug){
-	struct bb_plugin_ob_ud* plug_ud = (struct bb_plugin_ob_ud*)plug->ud;
-	if(plug_ud){
-		plug_ud->keepRunning = 0;
+    struct bb_plugin_ob_ud* plug_ud = (struct bb_plugin_ob_ud*)plug->ud;
+    if(plug_ud){
+        plug_ud->keepRunning = 0;
 
-		pthread_join(plug_ud->obusThread, NULL);
+        pthread_join(plug_ud->obusThread, NULL);
 
-		free(plug_ud->pubServ);
-		free(plug_ud);
-	}
+        free(plug_ud->pubServ);
+        free(plug_ud);
+    }
 }

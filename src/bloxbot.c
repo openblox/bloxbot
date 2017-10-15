@@ -24,7 +24,6 @@
 #include <stdio.h>
 #include <string.h>
 
-
 #include <pthread.h>
 
 pthread_mutex_t _sock_lock;
@@ -75,23 +74,23 @@ int blox_send(char* line){
 }
 
 int blox_sendMsg(char* target, char* msg){
-	if(!target){
-		return 0;
-	}
-	if(!msg){
-		return 0;
-	}
+    if(!target){
+        return 0;
+    }
+    if(!msg){
+        return 0;
+    }
 
-	size_t lenChan = strlen(target);
-	size_t lenMsg = strlen(msg);
-	char line[12 + lenChan + lenMsg];
-	strcpy(line, "PRIVMSG ");
-	strcat(line, target);
-	strcat(line, " :");
-	strcat(line, msg);
-	strcat(line, "\r\n");
+    size_t lenChan = strlen(target);
+    size_t lenMsg = strlen(msg);
+    char line[12 + lenChan + lenMsg];
+    strcpy(line, "PRIVMSG ");
+    strcat(line, target);
+    strcat(line, " :");
+    strcat(line, msg);
+    strcat(line, "\r\n");
 
-	return blox_send(line);
+    return blox_send(line);
 }
 
 int blox_join(char* chan){
@@ -141,30 +140,29 @@ int blox_pong(char* servName){
         return 0;
     }
     size_t lenServ = strlen(servName);
-	size_t lenWhole = 8 + lenServ;
+    size_t lenWhole = 8 + lenServ;
     char line[lenWhole];
     strcpy(line, "PONG :");
     strcat(line, servName);
     strcat(line, "\r\n");
 
-    return blox_sendDirectlyl(line, lenWhole);//PONGs are considered important, so they're sent directly.. DO NOT send too many PONGs too quickly!
+    return blox_sendDirectlyl(line, lenWhole);// PONGs are considered important, so they're sent directly.. DO NOT send too many PONGs too quickly!
 }
 
 unsigned char blox_isAdmin(char* srcNick, char* srcLogin, char* srcHost){
-	return ((strcmp(srcHost, "openblox/dev/JohnMH") == 0) ||
-			(strcmp(srcHost, "bloxbot/testing") == 0) ||
-			((strcmp(srcHost, "developer.openblox.org") == 0) && (strcmp(srcLogin, "~johnmh") == 0)));
+    return ((strcmp(srcHost, "openblox/johnmh") == 0) ||
+            (strcmp(srcHost, "redvice/safazi") == 0));
 }
 
 void blox_msgToUser(char* target, char* srcNick, unsigned char isPublic, char* msg){
-	if(target && isPublic){
-		char msgBuf[strlen(srcNick) + 2 + strlen(msg)];
-		strcpy(msgBuf, srcNick);
-		strcat(msgBuf, ": ");
-		strcat(msgBuf, msg);
-		
-		blox_sendMsg(target, msgBuf);
-	}else{
-		blox_sendMsg(srcNick, msg);
-	}
+    if(target && isPublic){
+        char msgBuf[strlen(srcNick) + 2 + strlen(msg)];
+        strcpy(msgBuf, srcNick);
+        strcat(msgBuf, ": ");
+        strcat(msgBuf, msg);
+
+        blox_sendMsg(target, msgBuf);
+    }else{
+        blox_sendMsg(srcNick, msg);
+    }
 }

@@ -33,7 +33,7 @@ int blox_sendDirectly(char* line);
 int blox_send(char* line);
 int blox_sendMsg(char* target, char* msg);
 int blox_join(char* chan);
-//TODO: Support channels with passwords?
+// TODO: Support channels with passwords?
 int blox_part(char* chan);
 int blox_partr(char* chan, char* reason);
 int blox_pong(char* servName);

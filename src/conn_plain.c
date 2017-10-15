@@ -44,7 +44,7 @@ size_t _conn_plain_read(bloxbot_Conn* conn, char* buf, int count){
         }
 
         if(ret == -1){
-            //TODO: Handle errors
+            // TODO: Handle errors
         }
 
         numRead++;
@@ -65,7 +65,7 @@ size_t _conn_plain_write(bloxbot_Conn* conn, char* buf, size_t count){
     ret = send(mode_ud->sockfd, buf, count, 0);
 
     if(ret == -1){
-        //Handle error
+        // Handle error
     }
 
     return ret;
@@ -90,7 +90,7 @@ bloxbot_Conn* bloxbot_conn_plain(char* addr, int port){
         return NULL;
     }
 
-    //Get everything ready to return
+    // Get everything ready to return
     bloxbot_Conn* conn = malloc(sizeof(bloxbot_Conn));
     if(!conn){
         return NULL;
